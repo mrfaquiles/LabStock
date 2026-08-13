@@ -1,7 +1,10 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-import vuetify from './plugins/vuetify' // Importa o plugin que criamos acima
+import vuetify from './plugins/vuetify'
+import router from './router/index.js'
+import './style.css'
 
-const app = createApp(App)
-app.use(vuetify)
-app.mount('#app')
+createApp(App)
+  .use(vuetify)
+  .use(router)
+  .mount('#app')

@@ -12,11 +12,12 @@ use App\Http\Controllers\LocalizacaoController;
 use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\HistoricoDescarteController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\VidrariaController;
 
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+// Route::get('/user', function (Request $request) {
+//     return $request->user();
+// })->middleware('auth:sanctum');
 
 
 Route::apiResource('itens', ItemController::class);
@@ -29,3 +30,4 @@ Route::apiResource('localizacoes', LocalizacaoController::class);
 Route::apiResource('laboratorios', LaboratorioController::class);
 Route::apiResource('descartes', HistoricoDescarteController::class);
 Route::apiResource('usuarios', UsuarioController::class);
+Route::apiResource('vidrarias', VidrariaController::class);

@@ -2,39 +2,52 @@
   <v-navigation-drawer 
     v-model="drawer" 
     permanent 
-    style="background-color: #004A26 !important;" 
+    style="background-color: #0B132B !important; color: #FFFFFF;" 
     theme="dark" 
     width="260"
+    elevation="2"
   >
-    <v-list-item title="LABSTOCK" prepend-icon="mdi-flask-outline" class="text-h5 font-weight-bold my-4"></v-list-item>
+    <!-- Topo / Logo -->
+    <v-list-item 
+      title="LABSTOCK" 
+      subtitle="Gerenciamento de Laboratório"
+      prepend-icon="mdi-flask-outline" 
+      class="text-h6 font-weight-bold py-4 px-4 text-cyan-accent-3"
+    ></v-list-item>
     
-    <v-divider></v-divider>
+    <v-divider class="border-opacity-25"></v-divider>
 
-    <v-list density="compact" nav>
-      <v-list-subheader>MENU PRINCIPAL</v-list-subheader>
-      <v-list-item prepend-icon="mdi-view-dashboard" title="Dashboard" value="dashboard"></v-list-item>
-      <v-list-item prepend-icon="mdi-package-variant" title="Produtos" value="produtos"></v-list-item>
-      <v-list-item prepend-icon="mdi-clipboard-list" title="Estoque" value="estoque"></v-list-item>
-      <v-list-item prepend-icon="mdi-truck" title="Fornecedores" value="fornecedores"></v-list-item>
-      <v-list-item prepend-icon="mdi-swap-horizontal" title="Movimentações" value="mov"></v-list-item>
+    <!-- Menu Principal com Links de Navegação -->
+    <v-list density="compact" nav class="px-3 mt-2">
+      <v-list-subheader class="text-grey-lighten-1 font-weight-bold text-caption">MENU PRINCIPAL</v-list-subheader>
+      
+      <v-list-item prepend-icon="mdi-view-dashboard" title="Dashboard" to="/" exact rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-flask" title="Reagentes" to="/reagentes" rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-cup" title="Vidrarias" to="/vidrarias" rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-tools" title="Equipamentos" to="/equipamentos" rounded="lg" class="mb-1"></v-list-item>
     </v-list>
 
-    <v-divider></v-divider>
+    <v-divider class="border-opacity-25 my-2"></v-divider>
 
-    <v-list density="compact" nav>
-      <v-list-subheader>CONFIGURAÇÕES</v-list-subheader>
-      <v-list-item prepend-icon="mdi-cog" title="Sistema" value="sistema"></v-list-item>
-      <v-list-item prepend-icon="mdi-account-group" title="Usuários" value="usuarios"></v-list-item>
+    <!-- Configurações -->
+    <v-list density="compact" nav class="px-3">
+      <v-list-subheader class="text-grey-lighten-1 font-weight-bold text-caption">CONFIGURAÇÕES</v-list-subheader>
+      <v-list-item prepend-icon="mdi-cog" title="Sistema" value="sistema" rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-account-group" title="Usuários" value="usuarios" rounded="lg" class="mb-1"></v-list-item>
     </v-list>
 
+    <!-- Rodapé do Menu com o Usuário -->
     <template v-slot:append>
-      <v-divider></v-divider>
-      <v-list-item
-        prepend-icon="mdi-account-circle"
-        :title="nomeUsuario"
-        subtitle="Admin"
-        nav
-      ></v-list-item>
+      <v-divider class="border-opacity-25"></v-divider>
+      <div class="pa-3">
+        <v-list-item
+          prepend-icon="mdi-account-circle"
+          :title="nomeUsuario"
+          subtitle="Admin"
+          rounded="lg"
+          class="bg-blue-grey-darken-4 text-white"
+        ></v-list-item>
+      </div>
     </template>
   </v-navigation-drawer>
 </template>

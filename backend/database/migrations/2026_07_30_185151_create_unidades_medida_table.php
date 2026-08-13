@@ -9,14 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void  
+    public function up()
     {
-    Schema::create('unidades_medida', function (Blueprint $table) {
-        $table->id();
-        $table->string('sigla', 10)->unique(); // Ex: g, ml, L, un
-        $table->string('descricao', 50);       // Ex: Gramas, Mililitros, Litros, Unidade
-        $table->timestamps();
-    });
+        Schema::create('unidades_medida', function (Blueprint $table) {
+            $table->id();
+            $table->string('sigla', 10)->unique(); // Ex: g, ml, L
+            $table->string('descricao', 50); // Ex: Gramas, Mililitros
+            $table->timestamps();
+        });
     }
 
     /**
@@ -26,4 +26,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('unidades_medida');
     }
+
+
 };

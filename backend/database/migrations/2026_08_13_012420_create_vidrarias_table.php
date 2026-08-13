@@ -11,8 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reagentes', function (Blueprint $table) {
+        Schema::create('vidrarias', function (Blueprint $table) {
             $table->id();
+            $table->string('nome');
+            $table->string('codigo');
+            $table->string('capacidade');
+            $table->integer('quantidade');
+            $table->string('estado')->default('Inteiro');
+            $table->string('localizacao')->nullable();
             $table->timestamps();
         });
     }
@@ -22,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('reagentes');
+        Schema::dropIfExists('vidrarias');
     }
 };
