@@ -185,7 +185,68 @@ export default {
       }
     },
     emitirRelatorio() { 
-      alert('Emitindo relatório de equipamentos e calibrações...'); 
+      const janela = window.open('', '', 'width=900,height=650');
+      
+      const conteudoHTML = `
+        <html>
+          <head>
+            <title>Relatório de Equipamentos - LabStock</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+              h2 { text-align: center; color: #0B132B; margin-bottom: 5px; }
+              p.sub { text-align: center; color: #666; margin-top: 0; margin-bottom: 30px; font-size: 14px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+              th { background-color: #0B132B; color: white; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .footer { margin-top: 40px; text-align: right; font-size: 11px; color: #777; }
+            </style>
+          </head>
+          <body>
+            <h2>LabStock - Relatório de Equipamentos</h2>
+            <p class="sub">Sistema de Gestão para Laboratórios Acadêmicos</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome do Equipamento</th>
+                  <th>Nº Patrimônio</th>
+                  <th>CATMAT</th>
+                  <th>Status</th>
+                  <th>Última Calibração</th>
+                  <th>Localização</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.equipamentos.map(e => `
+                  <tr>
+                    <td>${e.nome}</td>
+                    <td>${e.patrimonio}</td>
+                    <td>${e.catmat || '-'}</td>
+                    <td><b>${e.status}</b></td>
+                    <td>${e.ultima_calibracao || '-'}</td>
+                    <td>${e.localizacao || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+            </div>
+
+            ${'<' + 'script>'}
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            ${'<' + '/script>'}
+          </body>
+        </html>
+      `;
+
+      janela.document.write(conteudoHTML);
+      janela.document.close();
     },
     editar(item) {
       this.form = { ...item };

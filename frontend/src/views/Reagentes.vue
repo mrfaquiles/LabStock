@@ -198,7 +198,62 @@ export default {
       this.dialogExcluir = false;
     },
     emitirRelatorio() {
-      alert('Gerando relatório de reagentes e validades...');
+      const janela = window.open('', '', 'width=900,height=650');
+      
+      const conteudoHTML = `
+        <html>
+          <head>
+            <title>Relatório de Reagentes - LabStock</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+              h2 { text-align: center; color: #004A26; margin-bottom: 5px; }
+              p.sub { text-align: center; color: #666; margin-top: 0; margin-bottom: 30px; font-size: 14px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+              th { background-color: #004A26; color: white; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .footer { margin-top: 40px; text-align: right; font-size: 11px; color: #777; }
+            </style>
+          </head>
+          <body>
+            <h2>LabStock - Relatório de Reagentes</h2>
+            <p class="sub">Sistema de Gestão para Laboratórios Acadêmicos</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome do Reagente</th>
+                  <th>Fórmula Química</th>
+                  <th>Número CAS</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.reagentes.map(r => `
+                  <tr>
+                    <td>${r.nome}</td>
+                    <td>${r.formula_quimica || '-'}</td>
+                    <td>${r.cas_number || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+            </div>
+
+            ${'<' + 'script>'}
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            ${'<' + '/script>'}
+          </body>
+        </html>
+      `;
+
+      janela.document.write(conteudoHTML);
+      janela.document.close();
     },
     atualizarEstoque() {
       this.carregarReagentes();

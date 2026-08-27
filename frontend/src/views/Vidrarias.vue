@@ -170,7 +170,70 @@ export default {
         alert('Erro ao salvar no banco. Verifique os campos.');
       }
     },
-    emitirRelatorio() { alert('Emitindo relatório de vidrarias...'); },
+    emitirRelatorio() {
+      const janela = window.open('', '', 'width=900,height=650');
+      
+      const conteudoHTML = `
+        <html>
+          <head>
+            <title>Relatório de Vidrarias - LabStock</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+              h2 { text-align: center; color: #004A26; margin-bottom: 5px; }
+              p.sub { text-align: center; color: #666; margin-top: 0; margin-bottom: 30px; font-size: 14px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+              th { background-color: #004A26; color: white; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .footer { margin-top: 40px; text-align: right; font-size: 11px; color: #777; }
+            </style>
+          </head>
+          <body>
+            <h2>LabStock - Relatório de Vidrarias</h2>
+            <p class="sub">Sistema de Gestão para Laboratórios Acadêmicos</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome do Item</th>
+                  <th>Código</th>
+                  <th>Capacidade</th>
+                  <th>Quantidade</th>
+                  <th>Estado</th>
+                  <th>Localização</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.vidrarias.map(v => `
+                  <tr>
+                    <td>${v.nome}</td>
+                    <td>${v.codigo}</td>
+                    <td>${v.capacidade || '-'}</td>
+                    <td>${v.quantidade}</td>
+                    <td><b>${v.estado}</b></td>
+                    <td>${v.localizacao || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+            </div>
+
+            ${'<' + 'script>'}
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            ${'<' + '/script>'}
+          </body>
+        </html>
+      `;
+
+      janela.document.write(conteudoHTML);
+      janela.document.close();
+    },
     editar(item) {
       this.form = { ...item }; // Copia os dados para o formulário
       this.dialog = true; // Abre o modal
