@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('equipamentos', function (Blueprint $table) {
             $table->id();
+            $table->string('nome');
+            $table->string('patrimonio');
+            $table->string('catmat')->nullable();
+            $table->string('status');
+            $table->date('ultima_calibracao')->nullable();
+            $table->string('localizacao')->nullable();
             $table->timestamps();
         });
     }

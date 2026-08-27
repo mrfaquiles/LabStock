@@ -5,9 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    /**
-     * Run the migrations.
-     */
+    
     public function up(): void
     {
         Schema::create('lotes', function (Blueprint $table) {
@@ -18,14 +16,11 @@ return new class extends Migration {
             $table->date('data_validade');
             $table->timestamps();
 
-            // Chave estrangeira ligada à tabela reagentes
             $table->foreign('reagente_id')->references('id')->on('reagentes')->onDelete('cascade');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
+
     public function down(): void
     {
         Schema::dropIfExists('lotes');

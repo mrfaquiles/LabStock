@@ -13,6 +13,9 @@ use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\HistoricoDescarteController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\VidrariaController;
+use App\Http\Controllers\ReagenteController;
+use App\Http\Controllers\EquipamentoController;
+
 
 
 // Route::get('/user', function (Request $request) {
@@ -31,3 +34,5 @@ Route::apiResource('laboratorios', LaboratorioController::class);
 Route::apiResource('descartes', HistoricoDescarteController::class);
 Route::apiResource('usuarios', UsuarioController::class);
 Route::apiResource('vidrarias', VidrariaController::class);
+Route::apiResource('reagentes', ReagenteController::class);
+Route::apiResource('equipamentos', EquipamentoController::class);

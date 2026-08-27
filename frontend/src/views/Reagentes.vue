@@ -48,13 +48,6 @@
           </v-toolbar>
         </template>
 
-        <!-- Status / Validade -->
-        <template v-slot:[`item.data_validade`]="{ item }">
-          <v-chip :color="isVencido(item.data_validade) ? 'error' : 'success'" size="small">
-            {{ item.data_validade }}
-          </v-chip>
-        </template>
-
         <!-- Ações na Tabela -->
         <template v-slot:[`item.acoes`]="{ item }">
           <v-icon size="small" class="me-2" color="primary" @click="editarReagente(item)">mdi-pencil</v-icon>
@@ -63,11 +56,11 @@
       </v-data-table>
     </v-card>
 
-    <!-- Modal de Cadastro / Edição de Reagente (Estilo do Print) -->
+    <!-- Modal de Cadastro / Edição -->
     <v-dialog v-model="dialog" max-width="800px" persistent>
       <v-card class="rounded-lg pa-4">
         <v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-h6 font-weight-bold">Novo Reagente</span>
+          <span class="text-h6 font-weight-bold">{{ editedItem.id ? 'Editar Reagente' : 'Novo Reagente' }}</span>
           <v-btn icon variant="text" @click="dialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
@@ -78,7 +71,6 @@
         <v-card-text>
           <v-form ref="form">
             <v-row>
-              <!-- Nome do Reagente -->
               <v-col cols="12" md="8">
                 <v-text-field
                   v-model="editedItem.nome"
@@ -89,90 +81,23 @@
                 ></v-text-field>
               </v-col>
 
-              <!-- Fórmula Química / Código -->
               <v-col cols="12" md="4">
                 <v-text-field
-                  v-model="editedItem.codigo"
-                  label="Código / Fórmula *"
+                  v-model="editedItem.formula_quimica"
+                  label="Fórmula Química"
                   variant="outlined"
                   density="comfortable"
-                  placeholder="Ex.: HCl-001"
-                ></v-text-field>
-              </v-col>
-
-              <!-- Fornecedor -->
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="editedItem.fornecedor"
-                  label="Fornecedor"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="Ex.: Sigma-Aldrich"
-                ></v-text-field>
-              </v-col>
-
-              <!-- Número do Lote -->
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="editedItem.lote"
-                  label="Número do Lote *"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="Ex.: LOTE-2026-A"
-                ></v-text-field>
-              </v-col>
-
-              <!-- Quantidade e Unidade -->
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="editedItem.quantidade"
-                  label="Quantidade Atual *"
-                  type="number"
-                  variant="outlined"
-                  density="comfortable"
+                  placeholder="Ex.: HCl"
                 ></v-text-field>
               </v-col>
 
               <v-col cols="12" md="6">
-                <v-select
-                  v-model="editedItem.unidade"
-                  :items="['mL', 'L', 'g', 'kg', 'frascos']"
-                  label="Unidade de Medida *"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
-              </v-col>
-
-              <!-- Quantidade Mínima para Alerta -->
-              <v-col cols="12" md="6">
                 <v-text-field
-                  v-model="editedItem.quantidade_minima"
-                  label="Quantidade Mínima de Alerta"
-                  type="number"
+                  v-model="editedItem.cas_number"
+                  label="Número CAS"
                   variant="outlined"
                   density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <!-- Data de Validade -->
-              <v-col cols="12" md="6">
-                <v-text-field
-                  v-model="editedItem.data_validade"
-                  label="Data de Validade *"
-                  type="date"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-text-field>
-              </v-col>
-
-              <!-- Localização no Estoque -->
-              <v-col cols="12">
-                <v-text-field
-                  v-model="editedItem.localizacao"
-                  label="Localização no Estoque (Armário/Prateleira)"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="Ex.: Armário de Ácidos, Prateleira 2"
+                  placeholder="Ex.: 7647-01-0"
                 ></v-text-field>
               </v-col>
             </v-row>
@@ -194,6 +119,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 
 export default {
@@ -209,57 +135,47 @@ export default {
       itemParaExcluir: null,
       headers: [
         { title: 'Nome do Reagente', key: 'nome', align: 'start' },
-        { title: 'Código', key: 'codigo' },
-        { title: 'Lote', key: 'lote' },
-        { title: 'Qtd. Atual', key: 'quantidade' },
-        { title: 'Unidade', key: 'unidade' },
-        { title: 'Validade', key: 'data_validade' },
-        { title: 'Localização', key: 'localizacao' },
+        { title: 'Fórmula', key: 'formula_quimica' },
+        { title: 'CAS', key: 'cas_number' },
         { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
       ],
-      reagentes: [
-        // Exemplo de dados visuais simulando o banco
-        { id: 1, nome: 'Ácido Clorídrico 37%', codigo: 'REAG-01', lote: 'LOT9823', quantidade: '500', unidade: 'mL', data_validade: '2027-10-15', localizacao: 'Armário de Ácidos 01' },
-        { id: 2, nome: 'Hidróxido de Sódio (Pernil)', codigo: 'REAG-02', lote: 'LOT4412', quantidade: '1000', unidade: 'g', data_validade: '2026-05-10', localizacao: 'Prateleira de Bases 02' }      ],
+      reagentes: [],
       editedItem: {
+        id: null,
         nome: '',
-        codigo: '',
-        fornecedor: '',
-        lote: '',
-        quantidade: '',
-        unidade: 'mL',
-        quantidade_minima: '',
-        data_validade: '',
-        localizacao: ''
+        formula_quimica: '',
+        cas_number: ''
       }
     }
   },
+  mounted() {
+    this.carregarReagentes();
+  },
   methods: {
+    async carregarReagentes() {
+      try {
+        const resposta = await axios.get('http://127.0.0.1:8000/api/reagentes');
+        this.reagentes = resposta.data;
+      } catch (erro) {
+        console.error('Erro ao carregar reagentes:', erro);
+      }
+    },
     abrirModalCadastro() {
-      this.editedItem = { nome: '', codigo: '', fornecedor: '', lote: '', quantidade: '', unidade: 'mL', quantidade_minima: '', data_validade: '', localizacao: '' };
+      this.editedItem = { id: null, nome: '', formula_quimica: '', cas_number: '' };
       this.dialog = true;
     },
-    salvarReagente() {
-      if (this.editedItem.id) {
-        const index = this.reagentes.findIndex(r => r.id === this.editedItem.id);
-        if (index !== -1) {
-          this.reagentes[index] = { ...this.editedItem };
+    async salvarReagente() {
+      try {
+        if (this.editedItem.id) {
+          await axios.put(`http://127.0.0.1:8000/api/reagentes/${this.editedItem.id}`, this.editedItem);
+        } else {
+          await axios.post('http://127.0.0.1:8000/api/reagentes', this.editedItem);
         }
-      } else {
-        this.reagentes.push({ ...this.editedItem, id: Date.now() });
+        this.carregarReagentes();
+        this.dialog = false;
+      } catch (erro) {
+        console.error('Erro ao salvar reagente:', erro);
       }
-      this.dialog = false;
-    },
-    emitirRelatorio() {
-      alert('Gerando relatório de reagentes e validades...');
-    },
-    atualizarEstoque() {
-      alert('Abrindo painel de movimentação/atualização rápida de estoque...');
-    },
-    isVencido(dataStr) {
-      const hoje = new Date();
-      const validade = new Date(dataStr);
-      return validade < hoje;
     },
     editarReagente(item) {
       this.editedItem = { ...item };
@@ -269,12 +185,23 @@ export default {
       this.itemParaExcluir = item;
       this.dialogExcluir = true;
     },
-    deletarItemConfirmado() {
+    async deletarItemConfirmado() {
       if (this.itemParaExcluir) {
-        this.reagentes = this.reagentes.filter(r => r.id !== this.itemParaExcluir.id);
+        try {
+          await axios.delete(`http://127.0.0.1:8000/api/reagentes/${this.itemParaExcluir.id}`);
+          this.carregarReagentes();
+        } catch (erro) {
+          console.error('Erro ao excluir reagente:', erro);
+        }
         this.itemParaExcluir = null;
       }
       this.dialogExcluir = false;
+    },
+    emitirRelatorio() {
+      alert('Gerando relatório de reagentes e validades...');
+    },
+    atualizarEstoque() {
+      this.carregarReagentes();
     }
   }
 }

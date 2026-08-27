@@ -14,7 +14,7 @@
         <v-btn color="grey-darken-2" variant="outlined" class="text-none me-2" prepend-icon="mdi-file-pdf-box" @click="emitirRelatorio">
           Relatório
         </v-btn>
-        <v-btn color="blue-darken-3" variant="tonal" class="text-none" prepend-icon="mdi-sync" @click="atualizarEstoque">
+        <v-btn color="blue-darken-3" variant="tonal" class="text-none" prepend-icon="mdi-sync" @click="carregarEquipamentos">
           Atualizar
         </v-btn>
       </div>
@@ -64,11 +64,11 @@
       </v-data-table>
     </v-card>
 
-    <!-- Modal de Cadastro -->
+    <!-- Modal de Cadastro / Edição -->
     <v-dialog v-model="dialog" max-width="700px" persistent>
       <v-card class="rounded-lg pa-4">
         <v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-h6 font-weight-bold">Novo Equipamento</span>
+          <span class="text-h6 font-weight-bold">{{ form.id ? 'Editar Equipamento' : 'Novo Equipamento' }}</span>
           <v-btn icon variant="text" @click="dialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
@@ -85,10 +85,13 @@
               <v-col cols="12" md="4">
                 <v-text-field v-model="form.patrimonio" label="Nº de Patrimônio *" variant="outlined" density="comfortable" placeholder="Ex.: PAT-9921"></v-text-field>
               </v-col>
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="4">
+                <v-text-field v-model="form.catmat" label="Código CATMAT" variant="outlined" density="comfortable" placeholder="Ex.: 123456"></v-text-field>
+              </v-col>
+              <v-col cols="12" md="4">
                 <v-select v-model="form.status" :items="['Operacional', 'Em Manutenção', 'Inativo']" label="Status de Operação *" variant="outlined" density="comfortable"></v-select>
               </v-col>
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="4">
                 <v-text-field v-model="form.ultima_calibracao" label="Última Calibração" type="date" variant="outlined" density="comfortable"></v-text-field>
               </v-col>
               <v-col cols="12">
@@ -109,6 +112,7 @@
 </template>
 
 <script>
+import axios from 'axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 
 export default {
@@ -125,36 +129,64 @@ export default {
       headers: [
         { title: 'Nome do Equipamento', key: 'nome', align: 'start' },
         { title: 'Nº Patrimônio', key: 'patrimonio' },
+        { title: 'CATMAT', key: 'catmat' },
         { title: 'Status', key: 'status' },
         { title: 'Última Calibração', key: 'ultima_calibracao' },
         { title: 'Localização', key: 'localizacao' },
         { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
       ],
-      equipamentos: [
-        { id: 1, nome: 'Balança Analítica Semi-Micro', patrimonio: 'PAT-0012', status: 'Operacional', ultima_calibracao: '2026-01-10', localizacao: 'Sala de Instrumentação' },
-        { id: 2, nome: 'Centrífuga de Bancada', patrimonio: 'PAT-0045', status: 'Em Manutenção', ultima_calibracao: '2025-08-15', localizacao: 'Lab de Biologia' }
-      ],
-      form: { nome: '', patrimonio: '', status: 'Operacional', ultima_calibracao: '', localizacao: '' }
+      equipamentos: [],
+      form: { 
+        id: null, 
+        nome: '', 
+        patrimonio: '', 
+        catmat: '', 
+        status: 'Operacional', 
+        ultima_calibracao: '', 
+        localizacao: '' 
+      }
     }
   },
+  mounted() {
+    this.carregarEquipamentos();
+  },
   methods: {
+    async carregarEquipamentos() {
+      try {
+        const resposta = await axios.get('http://127.0.0.1:8000/api/equipamentos');
+        this.equipamentos = resposta.data;
+      } catch (erro) {
+        console.error('Erro ao carregar equipamentos:', erro);
+      }
+    },
     abrirModalCadastro() {
-      this.form = { nome: '', patrimonio: '', status: 'Operacional', ultima_calibracao: '', localizacao: '' };
+      this.form = { 
+        id: null, 
+        nome: '', 
+        patrimonio: '', 
+        catmat: '', 
+        status: 'Operacional', 
+        ultima_calibracao: '', 
+        localizacao: '' 
+      };
       this.dialog = true;
     },
-    salvar() {
-      if (this.form.id) {
-        const index = this.equipamentos.findIndex(e => e.id === this.form.id);
-        if (index !== -1) {
-          this.equipamentos[index] = { ...this.form };
+    async salvar() {
+      try {
+        if (this.form.id) {
+          await axios.put(`http://127.0.0.1:8000/api/equipamentos/${this.form.id}`, this.form);
+        } else {
+          await axios.post('http://127.0.0.1:8000/api/equipamentos', this.form);
         }
-      } else {
-        this.equipamentos.push({ ...this.form, id: Date.now() });
+        this.carregarEquipamentos();
+        this.dialog = false;
+      } catch (erro) {
+        console.error('Erro ao salvar equipamento:', erro);
       }
-      this.dialog = false;
     },
-    emitirRelatorio() { alert('Emitindo relatório de equipamentos e calibrações...'); },
-    atualizarEstoque() { alert('Atualizando status dos equipamentos...'); },
+    emitirRelatorio() { 
+      alert('Emitindo relatório de equipamentos e calibrações...'); 
+    },
     editar(item) {
       this.form = { ...item };
       this.dialog = true;
@@ -163,9 +195,14 @@ export default {
       this.itemParaExcluir = item;
       this.dialogExcluir = true;
     },
-    deletarItemConfirmado() {
+    async deletarItemConfirmado() {
       if (this.itemParaExcluir) {
-        this.equipamentos = this.equipamentos.filter(e => e.id !== this.itemParaExcluir.id);
+        try {
+          await axios.delete(`http://127.0.0.1:8000/api/equipamentos/${this.itemParaExcluir.id}`);
+          this.carregarEquipamentos();
+        } catch (erro) {
+          console.error('Erro ao excluir equipamento:', erro);
+        }
         this.itemParaExcluir = null;
       }
       this.dialogExcluir = false;
