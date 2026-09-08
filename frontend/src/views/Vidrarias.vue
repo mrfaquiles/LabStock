@@ -155,7 +155,12 @@ const salvar = async () => {
 
 const emitirRelatorio = () => {
     const janela = window.open('', '', 'width=900,height=650');
-    
+
+    if (!janela) {
+      alert('Não foi possível abrir a janela do relatório. Verifique se o navegador está bloqueando pop-ups para este site.');
+      return;
+    }
+
     const conteudoHTML = `
       <html>
         <head>
@@ -187,7 +192,7 @@ const emitirRelatorio = () => {
               ${vidrariaStore.getAllVidrarias.map(v => `
                 <tr>
                   <td>${v.nome}</td>
-                  <td>${v.codigo}</td>
+                  <td>${v.catmat}</td>
                   <td>${v.quantidade}</td>
                 </tr>
               `).join('')}
@@ -197,17 +202,11 @@ const emitirRelatorio = () => {
           <div class="footer">
             Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
           </div>
-
-          ${'<' + 'script>'}
-            window.onload = function() {
-              window.print();
-              window.close();
-            }
-          ${'<' + '/script>'}
         </body>
       </html>
     `;
 
+    //console.log('Conteúdo do relatório:', conteudoHTML); // Log para depuração
     janela.document.write(conteudoHTML);
     janela.document.close();
   }
