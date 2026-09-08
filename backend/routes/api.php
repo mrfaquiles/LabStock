@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\saidaVidrariaController;
 use App\Http\Controllers\Api\entradaEquipamentoController;
 use App\Http\Controllers\Api\saidaEquipamentoController;
 use App\Http\Controllers\Api\UnidadeMedidaController;
+use App\Http\Controllers\Api\UsuarioController;
 
 Route::apiResource('unidademedidas', UnidadeMedidaController::class);
 Route::apiResource('entradavidrarias', entradaVidrariaController::class);

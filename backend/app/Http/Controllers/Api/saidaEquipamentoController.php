@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
 use App\Models\saidaEquipamento;
 use Illuminate\Http\Request;
 
-class saidaEquipamentoController
+class saidaEquipamentoController extends Controller
 {
     /**
      * Display a listing of the resource.

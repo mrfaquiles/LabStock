@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
 use App\Models\saidaVidraria;
 use Illuminate\Http\Request;
 
-class saidaVidrariaController
+class saidaVidrariaController extends Controller
 {
     /**
      * Display a listing of the resource.

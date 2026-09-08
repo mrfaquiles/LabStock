@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
 use App\Models\entradaEquipamento;
 use Illuminate\Http\Request;
 
-class entradaEquipamentoController
+class entradaEquipamentoController extends Controller
 {
     /**
      * Display a listing of the resource.
