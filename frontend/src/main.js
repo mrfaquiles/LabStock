@@ -1,13 +1,14 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import vuetify from './plugins/vuetify'
 import router from './router/index.js'
 import './style.css'
-import api from './plugins/axios.js'
+import './plugins/axios'
 
 
 createApp(App)
   .use(vuetify)
   .use(router)
-  .config.globalProperties.$api = api
+  .use(createPinia())
   .mount('#app')
