@@ -2,37 +2,27 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ItemController;
-use App\Http\Controllers\FornecedorController;
-use App\Http\Controllers\ProdutoController;
-use App\Http\Controllers\MovimentacaoController;
-use App\Http\Controllers\EstoqueController;
-use App\Http\Controllers\LoteController;
-use App\Http\Controllers\LocalizacaoController;
-use App\Http\Controllers\LaboratorioController;
-use App\Http\Controllers\HistoricoDescarteController;
-use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\VidrariaController;
-use App\Http\Controllers\ReagenteController;
-use App\Http\Controllers\EquipamentoController;
+use App\Http\Controllers\Api\laboratorioController;
+use App\Http\Controllers\Api\vidrariaController;
+use App\Http\Controllers\Api\reagenteController;
+use App\Http\Controllers\Api\equipamentoController;
+use App\Http\Controllers\Api\entradaReagenteController;
+use App\Http\Controllers\Api\saidaReagenteController;
+use App\Http\Controllers\Api\entradaVidrariaController;
+use App\Http\Controllers\Api\saidaVidrariaController;
+use App\Http\Controllers\Api\entradaEquipamentoController;
+use App\Http\Controllers\Api\saidaEquipamentoController;
+use App\Http\Controllers\Api\UnidadeMedidaController;
 
-
-
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
-
-
-Route::apiResource('itens', ItemController::class);
-Route::apiResource('movimentacoes', MovimentacaoController::class);
-Route::apiResource('fornecedores', FornecedorController::class);
-Route::apiResource('produtos', ProdutoController::class);
-Route::apiResource('estoques', EstoqueController::class);
-Route::apiResource('lotes', LoteController::class);
-Route::apiResource('localizacoes', LocalizacaoController::class);
-Route::apiResource('laboratorios', LaboratorioController::class);
-Route::apiResource('descartes', HistoricoDescarteController::class);
+Route::apiResource('unidademedidas', UnidadeMedidaController::class);
+Route::apiResource('entradavidrarias', entradaVidrariaController::class);
+Route::apiResource('saidavidrarias', saidaVidrariaController::class);
+Route::apiResource('entradareagentes', entradaReagenteController::class);
+Route::apiResource('saidareagentes', saidaReagenteController::class);
+Route::apiResource('entradaequipamentos', entradaEquipamentoController::class);
+Route::apiResource('saidaequipamentos', saidaEquipamentoController::class);
+Route::apiResource('laboratorios', laboratorioController::class);
 Route::apiResource('usuarios', UsuarioController::class);
-Route::apiResource('vidrarias', VidrariaController::class);
-Route::apiResource('reagentes', ReagenteController::class);
-Route::apiResource('equipamentos', EquipamentoController::class);
+Route::apiResource('vidrarias', vidrariaController::class);
+Route::apiResource('reagentes', reagenteController::class);
+Route::apiResource('equipamentos', equipamentoController::class);
