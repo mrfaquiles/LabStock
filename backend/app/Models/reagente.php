@@ -2,19 +2,27 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class reagente extends Model
 {
-    //
+    use HasFactory;
+
     protected $table = 'reagentes';
     protected $primaryKey = 'idreagente';
+    
     protected $fillable = [
         'nome',
         'descricao',
         'idunidademedida',
         'quantidade',
         'catmat',
+        'lote',
+        'data_validade',
+        'localizacao',
+        'meses_alerta',
+        'imagem',
         'ativo',
     ];
 

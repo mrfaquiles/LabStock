@@ -49,12 +49,12 @@
           </v-toolbar>
         </template>
 
-        <!-- Nome do Equipamento com Tooltip de Descrição -->
+      <!-- Nome do Reagente com Menu Flutuante Estilizado e Parágrafos Respeitados -->
         <template v-slot:[`item.nome`]="{ item }">
           <div class="d-flex align-center">
             <span class="me-2">{{ item.nome }}</span>
             
-            <v-tooltip v-if="item.descricao" location="top">
+            <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
               <template v-slot:activator="{ props }">
                 <v-icon
                   v-bind="props"
@@ -65,10 +65,12 @@
                   mdi-help-circle-outline
                 </v-icon>
               </template>
-              <span style="max-width: 350px; display: block; white-space: normal; line-height: 1.4;">
-                {{ item.descricao }}
-              </span>
-            </v-tooltip>
+              <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
+                <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">
+                  {{ item.descricao }}
+                </p>
+              </v-card>
+            </v-menu>
           </div>
         </template>
 
