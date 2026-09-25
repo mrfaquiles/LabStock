@@ -2,19 +2,25 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class equipamento extends Model
 {
-    //
+    use HasFactory;
+
     protected $table = 'equipamentos';
     protected $primaryKey = 'idequipamento';
+
     protected $fillable = [
         'nome',
         'descricao',
         'quantidade',
         'catmat',
-        'ativo',
+        'patrimonio',
+        'status',
+        'localizacao',
+        'ativo'
     ];
 
     public function entradas()

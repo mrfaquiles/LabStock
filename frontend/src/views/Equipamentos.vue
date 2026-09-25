@@ -49,6 +49,29 @@
           </v-toolbar>
         </template>
 
+        <!-- Nome do Equipamento com Tooltip de Descrição -->
+        <template v-slot:[`item.nome`]="{ item }">
+          <div class="d-flex align-center">
+            <span class="me-2">{{ item.nome }}</span>
+            
+            <v-tooltip v-if="item.descricao" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  size="small"
+                  color="grey-darken-1"
+                  class="cursor-pointer"
+                >
+                  mdi-help-circle-outline
+                </v-icon>
+              </template>
+              <span style="max-width: 350px; display: block; white-space: normal; line-height: 1.4;">
+                {{ item.descricao }}
+              </span>
+            </v-tooltip>
+          </div>
+        </template>
+
         <!-- Status de Funcionamento -->
         <template v-slot:[`item.status`]="{ item }">
           <v-chip :color="item.status === 'Operacional' ? 'success' : 'warning'" size="small" variant="tonal">
@@ -68,7 +91,7 @@
     <v-dialog v-model="dialog" max-width="700px" persistent>
       <v-card class="rounded-lg pa-4">
         <v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-h6 font-weight-bold">{{ form.id ? 'Editar Equipamento' : 'Novo Equipamento' }}</span>
+          <span class="text-h6 font-weight-bold">{{ form.idequipamento ? 'Editar Equipamento' : 'Novo Equipamento' }}</span>
           <v-btn icon variant="text" @click="dialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
@@ -85,17 +108,17 @@
               <v-col cols="12" md="4">
                 <v-text-field v-model="form.patrimonio" label="Nº de Patrimônio *" variant="outlined" density="comfortable" placeholder="Ex.: PAT-9921"></v-text-field>
               </v-col>
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="6">
                 <v-text-field v-model="form.catmat" label="Código CATMAT" variant="outlined" density="comfortable" placeholder="Ex.: 123456"></v-text-field>
               </v-col>
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="6">
                 <v-select v-model="form.status" :items="['Operacional', 'Em Manutenção', 'Inativo']" label="Status de Operação *" variant="outlined" density="comfortable"></v-select>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-text-field v-model="form.ultima_calibracao" label="Última Calibração" type="date" variant="outlined" density="comfortable"></v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-text-field v-model="form.localizacao" label="Laboratório / Localização no Prédio" variant="outlined" density="comfortable" placeholder="Ex.: Lab de Química Geral, Bancada 01"></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea v-model="form.descricao" label="Descrição" variant="outlined" density="comfortable" rows="2" placeholder="Detalhes adicionais..."></v-textarea>
               </v-col>
             </v-row>
           </v-form>
@@ -131,19 +154,18 @@ export default {
         { title: 'Nº Patrimônio', key: 'patrimonio' },
         { title: 'CATMAT', key: 'catmat' },
         { title: 'Status', key: 'status' },
-        { title: 'Última Calibração', key: 'ultima_calibracao' },
         { title: 'Localização', key: 'localizacao' },
         { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
       ],
       equipamentos: [],
       form: { 
-        id: null, 
+        idequipamento: null, 
         nome: '', 
         patrimonio: '', 
         catmat: '', 
         status: 'Operacional', 
-        ultima_calibracao: '', 
-        localizacao: '' 
+        localizacao: '',
+        descricao: '' 
       }
     }
   },
@@ -161,20 +183,20 @@ export default {
     },
     abrirModalCadastro() {
       this.form = { 
-        id: null, 
+        idequipamento: null, 
         nome: '', 
         patrimonio: '', 
         catmat: '', 
         status: 'Operacional', 
-        ultima_calibracao: '', 
-        localizacao: '' 
+        localizacao: '',
+        descricao: '' 
       };
       this.dialog = true;
     },
     async salvar() {
       try {
-        if (this.form.id) {
-          await axios.put(`http://127.0.0.1:8000/api/equipamentos/${this.form.id}`, this.form);
+        if (this.form.idequipamento) {
+          await axios.put(`http://127.0.0.1:8000/api/equipamentos/${this.form.idequipamento}`, this.form);
         } else {
           await axios.post('http://127.0.0.1:8000/api/equipamentos', this.form);
         }
@@ -213,7 +235,6 @@ export default {
                   <th>Nº Patrimônio</th>
                   <th>CATMAT</th>
                   <th>Status</th>
-                  <th>Última Calibração</th>
                   <th>Localização</th>
                 </tr>
               </thead>
@@ -221,10 +242,9 @@ export default {
                 ${this.equipamentos.map(e => `
                   <tr>
                     <td>${e.nome}</td>
-                    <td>${e.patrimonio}</td>
+                    <td>${e.patrimonio || '-'}</td>
                     <td>${e.catmat || '-'}</td>
                     <td><b>${e.status}</b></td>
-                    <td>${e.ultima_calibracao || '-'}</td>
                     <td>${e.localizacao || '-'}</td>
                   </tr>
                 `).join('')}
@@ -259,7 +279,7 @@ export default {
     async deletarItemConfirmado() {
       if (this.itemParaExcluir) {
         try {
-          await axios.delete(`http://127.0.0.1:8000/api/equipamentos/${this.itemParaExcluir.id}`);
+          await axios.delete(`http://127.0.0.1:8000/api/equipamentos/${this.itemParaExcluir.idequipamento}`);
           this.carregarEquipamentos();
         } catch (erro) {
           console.error('Erro ao excluir equipamento:', erro);

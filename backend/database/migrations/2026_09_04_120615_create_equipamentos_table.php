@@ -17,6 +17,11 @@ return new class extends Migration
             $table->text('descricao')->nullable();
             $table->integer('quantidade')->default(0);
             $table->string('catmat', 50)->nullable();
+            // Campos novos adicionados
+            $table->string('patrimonio')->nullable();
+            $table->string('status')->default('Operacional');
+            $table->string('localizacao')->nullable();
+            
             $table->tinyInteger('ativo')->default(1);
             $table->timestamps();
         });
