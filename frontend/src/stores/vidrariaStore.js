@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import api  from '../plugins/axios';
+import api, { mensagemErro } from '../plugins/axios';
 
 
 export const useVidrariaStore = defineStore('vidraria', {
@@ -15,11 +15,11 @@ export const useVidrariaStore = defineStore('vidraria', {
   getters: {
     getAllVidrarias: (state) => state.vidararias,
     getActiveVidrarias: (state) => state.vidararias.filter(vidraria => vidraria.ativo),
-    getVidrariaById: (state) => (id) => state.vidararias.find(vidraria => vidraria.id_vidraria === id),
+    getVidrariaById: (state) => (id) => state.vidararias.find(vidraria => vidraria.idvidraria === id),
     getSelectedVidraria: (state) => state.selectedVidraria,
     isLoadingVidrarias: (state) => state.loading,
     getVidrariaErrors: (state) => state.error,
-    getTotal: (state) => state.length,
+    getTotal: (state) => state.vidararias.length,
   },
 
   // `actions` são onde você define métodos para interagir com a API e alterar o estado.
@@ -34,7 +34,7 @@ export const useVidrariaStore = defineStore('vidraria', {
         console.log('Vidrarias carregadas:', this.vidararias);
         return true;
       } catch (err) {
-        this.error = err.response?.data?.message || 'Erro ao carregar vidrarias.';
+        this.error = mensagemErro(err, 'Erro ao carregar vidrarias.');
         console.error('Erro ao buscar vidrarias:', err);
         return false;
       } finally {
@@ -50,7 +50,7 @@ export const useVidrariaStore = defineStore('vidraria', {
         const response = await api.post('/vidrarias', {
           nome: vidraria.nome, //Atributos da entidade vidrarias
           descricao: vidraria.descricao,
-          quantidade: vidraria.quantidade,
+          quantidade: Number(vidraria.quantidade) || 0,
           catmat: vidraria.catmat,
           ativo: vidraria.ativo==1 ? "1" : "0",
         });
@@ -60,7 +60,7 @@ export const useVidrariaStore = defineStore('vidraria', {
         console.log('Vidraria criada com sucesso:', response.data);
         return true;
       } catch (err) {
-        this.error = err.response?.data?.message || 'Erro ao criar vidraria.';
+        this.error = mensagemErro(err, 'Erro ao criar vidraria.');
         console.error('Erro ao criar vidraria:', err);
         return false;
       } finally {
@@ -68,27 +68,27 @@ export const useVidrariaStore = defineStore('vidraria', {
       }
     },
 
-    async updateVidraria(id_vidraria, updated) {
+    async updateVidraria(idvidraria, updated) {
       this.loading = true;
       this.error = null;
       try {
-        const response = await api.put(`/vidrarias/${id_vidraria}`, {
+        const response = await api.put(`/vidrarias/${idvidraria}`, {
           nome: updated.nome,
           descricao: updated.descricao,
-          quantidade: updated.quantidade,
+          quantidade: Number(updated.quantidade) || 0,
           catmat: updated.catmat,
           ativo: updated.ativo==1 ? "1" : "0",	
         });
 
         //Atualizando os dados na Array local
-        const index = this.vidararias.findIndex(vidraria => vidraria.id_vidraria === id_vidraria );
+        const index = this.vidararias.findIndex(vidraria => vidraria.idvidraria === idvidraria );
         if (index !== -1) {
           this.vidararias[index] = { ...this.vidararias[index], ...response.data };
         }
         //console.log('Vidraria atualizada com sucesso:', response.data);
         return true;
       } catch (err) {
-        this.error = err.response?.data?.message || 'Erro ao atualizar vidraria.';
+        this.error = mensagemErro(err, 'Erro ao atualizar vidraria.');
         console.error('Erro ao atualizar vidraria:', err);
         return false;
       } finally {
@@ -96,19 +96,19 @@ export const useVidrariaStore = defineStore('vidraria', {
       }
     },
 
-    async deleteVidraria(id_vidraria) {
+    async deleteVidraria(idvidraria) {
       this.loading = true;
       this.error = null;
       try {
         //Apagando na API
-        await api.delete(`/vidrarias/${id_vidraria}`);
+        await api.delete(`/vidrarias/${idvidraria}`);
 
         //Remove o evento do array local
-        this.vidararias = this.vidararias.filter(vidraria => vidraria.id_vidraria !== id_vidraria);
-        //console.log(`Vidraria com ID ${id_vidraria} deletada com sucesso.`);
+        this.vidararias = this.vidararias.filter(vidraria => vidraria.idvidraria !== idvidraria);
+        //console.log(`Vidraria com ID ${idvidraria} deletada com sucesso.`);
         return true;
       } catch (err) {
-        this.error = err.response?.data?.message || 'Erro ao deletar vidraria.';
+        this.error = mensagemErro(err, 'Erro ao deletar vidraria.');
         //console.error('Erro ao deletar vidraria :', err);
         return false;
       } finally {
@@ -117,8 +117,8 @@ export const useVidrariaStore = defineStore('vidraria', {
     },
 
     // Ação para selecionar uma vidraria (útil para formulários de edição)
-    selectVidraria(id_vidraria) {
-      this.selectedVidraria = this.getVidrariaById(id_vidraria);
+    selectVidraria(idvidraria) {
+      this.selectedVidraria = this.getVidrariaById(idvidraria);
     },
 
     // Ação para limpar a vidraria selecionada

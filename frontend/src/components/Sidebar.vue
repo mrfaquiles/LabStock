@@ -25,16 +25,19 @@
       <v-list-item prepend-icon="mdi-flask" title="Reagentes" to="/reagentes" rounded="lg" class="mb-1"></v-list-item>
       <v-list-item prepend-icon="mdi-cup" title="Vidrarias" to="/vidrarias" rounded="lg" class="mb-1"></v-list-item>
       <v-list-item prepend-icon="mdi-tools" title="Equipamentos" to="/equipamentos" rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-file-chart" title="Relatórios" to="/relatorios" rounded="lg" class="mb-1"></v-list-item>
     </v-list>
 
-    <v-divider class="border-opacity-25 my-2"></v-divider>
+    <!-- Configurações (somente administrador) -->
+    <template v-if="auth.isAdmin">
+      <v-divider class="border-opacity-25 my-2"></v-divider>
 
-    <!-- Configurações -->
-    <v-list density="compact" nav class="px-3">
-      <v-list-subheader class="text-grey-lighten-1 font-weight-bold text-caption">CONFIGURAÇÕES</v-list-subheader>
-      <v-list-item prepend-icon="mdi-cog" title="Sistema" value="sistema" rounded="lg" class="mb-1"></v-list-item>
-      <v-list-item prepend-icon="mdi-account-group" title="Usuários" value="usuarios" rounded="lg" class="mb-1"></v-list-item>
-    </v-list>
+      <v-list density="compact" nav class="px-3">
+        <v-list-subheader class="text-grey-lighten-1 font-weight-bold text-caption">CONFIGURAÇÕES</v-list-subheader>
+        <v-list-item prepend-icon="mdi-cog" title="Sistema" to="/configuracoes" rounded="lg" class="mb-1"></v-list-item>
+        <v-list-item prepend-icon="mdi-account-group" title="Usuários" to="/usuarios" rounded="lg" class="mb-1"></v-list-item>
+      </v-list>
+    </template>
 
     <!-- Rodapé do Menu com o Usuário -->
     <template v-slot:append>
@@ -42,11 +45,15 @@
       <div class="pa-3">
         <v-list-item
           prepend-icon="mdi-account-circle"
-          :title="nomeUsuario"
-          subtitle="Admin"
+          :title="auth.usuario?.nome"
+          :subtitle="auth.nomePerfil"
           rounded="lg"
           class="bg-blue-grey-darken-4 text-white"
-        ></v-list-item>
+        >
+          <template v-slot:append>
+            <v-btn icon="mdi-logout" variant="text" size="small" title="Sair" @click="sair"></v-btn>
+          </template>
+        </v-list-item>
       </div>
     </template>
   </v-navigation-drawer>
@@ -54,6 +61,15 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../stores/authStore';
+
 const drawer = ref(true);
-defineProps({ nomeUsuario: String });
+const auth = useAuthStore();
+const router = useRouter();
+
+const sair = async () => {
+  await auth.logout();
+  router.replace('/login');
+};
 </script>

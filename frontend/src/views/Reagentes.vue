@@ -1,29 +1,27 @@
 <template>
   <v-container fluid class="pa-6">
     <!-- Cabeçalho e Botões de Ação -->
-    <v-row class="mb-6 align-center">
-      <v-col cols="12" md="6">
-        <h1 class="text-h5 font-weight-bold" style="color: #004A26;">Gerenciamento de Reagentes</h1>
-        <p class="text-subtitle-2 text-grey-darken-1">Controle de estoque, lotes e validades de reagentes químicos</p>
-      </v-col>
-      <v-col cols="12" md="6" class="text-md-right">
-        <v-btn color="#004A26" class="text-none me-2 mb-2 text-white" prepend-icon="mdi-plus" @click="abrirModalCadastro">
-          Cadastrar Reagente
-        </v-btn>
-        <v-btn color="grey-darken-2" variant="outlined" class="text-none me-2 mb-2" prepend-icon="mdi-file-pdf-box" @click="emitirRelatorio">
-          Emitir Relatório
-        </v-btn>
-        <v-btn color="blue-darken-2" variant="tonal" class="text-none mb-2" prepend-icon="mdi-sync" @click="atualizarEstoque">
-          Atualizar Estoque
-        </v-btn>
-      </v-col>
-    </v-row>
+    <CabecalhoPagina titulo="Reagentes" subtitulo="Controle de estoque, lotes e validades de reagentes químicos" icone="mdi-flask">
+      <v-btn v-if="auth.podeEditar" color="primary" class="text-none text-white" prepend-icon="mdi-plus" @click="abrirModalCadastro">
+        Cadastrar Reagente
+      </v-btn>
+      <v-btn color="grey-darken-2" variant="outlined" class="text-none" prepend-icon="mdi-file-pdf-box" @click="emitirRelatorio">
+        Emitir Relatório
+      </v-btn>
+      <v-btn color="blue-darken-2" variant="tonal" class="text-none" prepend-icon="mdi-sync" @click="atualizarEstoque">
+        Atualizar Estoque
+      </v-btn>
+    </CabecalhoPagina>
 
     <ModalConfirmacao
       v-model="dialogExcluir"
       :nomeItem="itemParaExcluir?.nome"
       @confirm="deletarItemConfirmado"
     />
+
+    <v-snackbar v-model="snackbar.ativo" :color="snackbar.cor" timeout="4000" location="top right">
+      {{ snackbar.texto }}
+    </v-snackbar>
 
     <!-- Tabela de Reagentes -->
     <v-card class="elevation-1 rounded-lg">
@@ -52,7 +50,7 @@
         <template v-slot:[`item.nome`]="{ item }">
           <div class="d-flex align-center">
             <span class="me-2">{{ item.nome }}</span>
-            
+
             <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
               <template v-slot:activator="{ props }">
                 <v-icon
@@ -73,23 +71,62 @@
           </div>
         </template>
 
+        <!-- Quantidade total (soma dos saldos dos lotes) -->
+        <template v-slot:[`item.quantidade`]="{ item }">
+          {{ formatarNumero(item.quantidade) }}
+        </template>
+
         <!-- Unidade de Medida -->
         <template v-slot:[`item.unidade_medida`]="{ item }">
           <span>{{ item.unidade_medida?.sigla || item.unidade_medida?.nome || '-' }}</span>
         </template>
 
-        <!-- Data de Validade com Alerta Visual -->
+        <!-- Lotes com saldo (menu com o detalhe de cada lote) -->
+        <template v-slot:[`item.lote`]="{ item }">
+          <span v-if="!item.lotes?.length" class="text-grey">Sem saldo</span>
+          <v-menu v-else open-on-hover location="top" :close-on-content-click="false">
+            <template v-slot:activator="{ props }">
+              <span v-bind="props" class="cursor-pointer">
+                {{ item.lotes[0].lote }}
+                <v-chip v-if="item.lotes.length > 1" size="x-small" variant="tonal" color="primary" class="ms-1">
+                  +{{ item.lotes.length - 1 }}
+                </v-chip>
+              </span>
+            </template>
+            <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
+              <p class="text-caption font-weight-bold text-blue-grey-darken-4 mb-1">Lotes em estoque</p>
+              <div v-for="lote in item.lotes" :key="lote.identradareagente" class="text-body-2 text-blue-grey-darken-4">
+                <strong>{{ lote.lote }}</strong> — {{ formatarNumero(lote.saldo) }} {{ sigla(item) }}
+                (val. {{ formatarDataExibicao(lote.data_validade) }})
+              </div>
+            </v-card>
+          </v-menu>
+        </template>
+
+        <!-- Validade mais próxima entre os lotes com saldo, com Alerta Visual -->
         <template v-slot:[`item.data_validade`]="{ item }">
-          <v-chip v-if="item.data_validade" :color="verificarCorValidade(item)" size="small" variant="tonal">
-            {{ formatarDataExibicao(item.data_validade) }}
+          <v-chip v-if="validadeExibida(item)" :color="verificarCorValidade(item)" size="small" variant="tonal">
+            {{ formatarDataExibicao(validadeExibida(item)) }}
           </v-chip>
           <span v-else>-</span>
         </template>
 
         <!-- Ações na Tabela -->
         <template v-slot:[`item.acoes`]="{ item }">
-          <v-icon size="small" class="me-2" color="primary" @click="editarReagente(item)">mdi-pencil</v-icon>
-          <v-icon size="small" color="error" @click="excluirReagente(item)">mdi-delete</v-icon>
+          <div v-if="auth.podeEditar" class="d-flex justify-end">
+            <v-tooltip text="Registrar uso" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="me-2" color="deep-orange-darken-2" :disabled="!item.lotes?.length" @click="abrirUso(item)">mdi-flask-minus-outline</v-icon>
+              </template>
+            </v-tooltip>
+            <v-tooltip text="Nova entrada de lote" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" class="me-2" color="green-darken-2" @click="abrirEntrada(item)">mdi-package-variant-plus</v-icon>
+              </template>
+            </v-tooltip>
+            <v-icon size="small" class="me-2" color="primary" @click="editarReagente(item)">mdi-pencil</v-icon>
+            <v-icon size="small" color="error" @click="excluirReagente(item)">mdi-delete</v-icon>
+          </div>
         </template>
       </v-data-table>
     </v-card>
@@ -103,7 +140,7 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
-        
+
         <v-divider class="mb-4"></v-divider>
 
         <v-card-text>
@@ -116,6 +153,7 @@
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: Ácido Clorídrico 37%"
+                  :rules="[regras.obrigatorio]"
                 ></v-text-field>
               </v-col>
 
@@ -126,18 +164,26 @@
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: 123456"
+                  :rules="[regras.obrigatorio]"
                 ></v-text-field>
               </v-col>
 
               <v-col cols="12" md="4">
+                <!-- Quantidade só no cadastro (lote inicial); depois muda por uso ou nova entrada de lote -->
                 <v-text-field
                   v-model="editedItem.quantidade"
-                  label="Quantidade (Ex: 0.5) *"
+                  :label="editedItem.idreagente ? 'Estoque atual' : 'Quantidade (Ex: 0.5) *'"
                   type="number"
+                  min="0"
                   step="0.001"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: 0.5"
+                  :disabled="!!editedItem.idreagente"
+                  :hint="editedItem.idreagente ? 'Altere pelo registro de uso ou nova entrada de lote' : 'Na unidade base: 500 g = 0.5 kg'"
+                  persistent-hint
+                  :rules="editedItem.idreagente ? [] : [regras.obrigatorio, regras.naoNegativo]"
+                  @keydown="bloquearSinais"
                 ></v-text-field>
               </v-col>
 
@@ -150,8 +196,9 @@
                   label="Unidade de Medida *"
                   variant="outlined"
                   density="comfortable"
-                  no-data-text="Nenhuma unidade cadastrada"
+                  no-data-text="Nenhuma unidade cadastrada (rode php artisan db:seed)"
                   placeholder="Selecione"
+                  :rules="[regras.obrigatorio]"
                 ></v-select>
               </v-col>
 
@@ -163,6 +210,7 @@
                   density="comfortable"
                   placeholder="Ex.: LOT-2026-A"
                   autocomplete="off"
+                  :rules="[regras.obrigatorio]"
                 ></v-text-field>
               </v-col>
 
@@ -181,9 +229,13 @@
                   v-model="editedItem.meses_alerta"
                   label="Alerta de Vencimento (Meses antes)"
                   type="number"
+                  min="1"
+                  max="36"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Padrão: 4 meses"
+                  :rules="[regras.mesesAlerta]"
+                  @keydown="bloquearSinais"
                 ></v-text-field>
               </v-col>
 
@@ -206,6 +258,7 @@
                       density="comfortable"
                       append-inner-icon="mdi-calendar"
                       placeholder="Selecione a data"
+                      :rules="[regras.obrigatorio]"
                     ></v-text-field>
                   </template>
                   <v-date-picker
@@ -239,8 +292,201 @@
             Cancelar
           </v-btn>
           <!-- Botão de Salvar padronizado com a cor institucional do LabStock -->
-          <v-btn color="#004A26" class="text-none px-6 text-white" @click="salvarReagente">
+          <v-btn color="primary" variant="flat" class="text-none px-6 text-white" :loading="salvando" @click="salvarReagente">
             Salvar Reagente
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Modal de Registro de Uso (desconta do lote escolhido) -->
+    <v-dialog v-model="dialogUso" max-width="600px" persistent>
+      <v-card class="rounded-lg pa-4">
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span class="text-h6 font-weight-bold">Registrar Uso</span>
+          <v-btn icon variant="text" @click="dialogUso = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-card-subtitle class="pb-2">
+          {{ reagenteMov?.nome }} — estoque total: {{ formatarNumero(reagenteMov?.quantidade) }} {{ sigla(reagenteMov) }}
+        </v-card-subtitle>
+
+        <v-divider class="mb-4"></v-divider>
+
+        <v-card-text>
+          <v-form ref="formUso">
+            <v-row>
+              <v-col cols="12">
+                <v-select
+                  v-model="uso.identrada"
+                  :items="reagenteMov?.lotes || []"
+                  item-value="identradareagente"
+                  :item-title="tituloLote"
+                  label="Lote utilizado *"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Os lotes estão ordenados pela validade: use primeiro o que vence antes"
+                  persistent-hint
+                  :rules="[regras.obrigatorio]"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="8">
+                <v-text-field
+                  v-model="uso.quantidade"
+                  label="Quantidade utilizada *"
+                  type="number"
+                  min="0"
+                  step="any"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: 500"
+                  :rules="[regras.obrigatorio, regras.positivo, regraSaldoLote]"
+                  @keydown="bloquearSinais"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4">
+                <v-select
+                  v-model="uso.fator"
+                  :items="opcoesUnidade(reagenteMov)"
+                  item-title="sigla"
+                  item-value="fator"
+                  label="Unidade"
+                  variant="outlined"
+                  density="comfortable"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12">
+                <v-textarea
+                  v-model="uso.observacao"
+                  label="Finalidade / Observação"
+                  variant="outlined"
+                  density="comfortable"
+                  rows="2"
+                  placeholder="Ex.: Aula prática de Química Analítica - Turma B"
+                ></v-textarea>
+              </v-col>
+            </v-row>
+          </v-form>
+
+          <v-alert v-if="loteSelecionado && quantidadeUsoBase > 0" type="info" variant="tonal" density="compact">
+            Será descontado <strong>{{ formatarNumero(quantidadeUsoBase) }} {{ sigla(reagenteMov) }}</strong>
+            do lote <strong>{{ loteSelecionado.lote }}</strong>.
+            Saldo do lote após o uso: <strong>{{ formatarNumero(loteSelecionado.saldo - quantidadeUsoBase) }} {{ sigla(reagenteMov) }}</strong>.
+          </v-alert>
+        </v-card-text>
+
+        <v-card-actions class="px-4 pb-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="outlined" color="grey-darken-1" class="text-none" @click="dialogUso = false">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" class="text-none px-6 text-white" :loading="salvando" @click="salvarUso">
+            Registrar Uso
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Modal de Nova Entrada de Lote -->
+    <v-dialog v-model="dialogEntrada" max-width="600px" persistent>
+      <v-card class="rounded-lg pa-4">
+        <v-card-title class="d-flex justify-space-between align-center">
+          <span class="text-h6 font-weight-bold">Nova Entrada de Lote</span>
+          <v-btn icon variant="text" @click="dialogEntrada = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-card-subtitle class="pb-2">{{ reagenteMov?.nome }}</v-card-subtitle>
+
+        <v-divider class="mb-4"></v-divider>
+
+        <v-card-text>
+          <v-form ref="formEntrada">
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="entrada.lote"
+                  label="Número do Lote *"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: LOT-2026-B"
+                  autocomplete="off"
+                  :rules="[regras.obrigatorio]"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="6">
+                <v-menu v-model="menuDataEntrada" :close-on-content-click="false" min-width="auto">
+                  <template v-slot:activator="{ props }">
+                    <v-text-field
+                      v-bind="props"
+                      :model-value="formatarDataExibicao(entrada.data_validade)"
+                      label="Validade do Lote *"
+                      readonly
+                      variant="outlined"
+                      density="comfortable"
+                      append-inner-icon="mdi-calendar"
+                      placeholder="Selecione a data"
+                      :rules="[regras.obrigatorio]"
+                    ></v-text-field>
+                  </template>
+                  <v-date-picker
+                    :model-value="null"
+                    :min="dataMinima"
+                    class="elevation-3 rounded-lg"
+                    density="compact"
+                    hide-header
+                    @update:model-value="d => { entrada.data_validade = paraIso(d); menuDataEntrada = false; }"
+                  ></v-date-picker>
+                </v-menu>
+              </v-col>
+
+              <v-col cols="8">
+                <v-text-field
+                  v-model="entrada.quantidade"
+                  label="Quantidade recebida *"
+                  type="number"
+                  min="0"
+                  step="any"
+                  variant="outlined"
+                  density="comfortable"
+                  hint="Ex.: 10 frascos de 1 L = 10 L (todos com a mesma validade)"
+                  persistent-hint
+                  :rules="[regras.obrigatorio, regras.positivo]"
+                  @keydown="bloquearSinais"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4">
+                <v-select
+                  v-model="entrada.fator"
+                  :items="opcoesUnidade(reagenteMov)"
+                  item-title="sigla"
+                  item-value="fator"
+                  label="Unidade"
+                  variant="outlined"
+                  density="comfortable"
+                ></v-select>
+              </v-col>
+
+              <v-col cols="12">
+                <v-text-field
+                  v-model="entrada.observacao"
+                  label="Observação"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: Nota fiscal 1234 / Fornecedor X"
+                ></v-text-field>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+
+        <v-card-actions class="px-4 pb-4">
+          <v-spacer></v-spacer>
+          <v-btn variant="outlined" color="grey-darken-1" class="text-none" @click="dialogEntrada = false">Cancelar</v-btn>
+          <v-btn color="primary" variant="flat" class="text-none px-6 text-white" :loading="salvando" @click="salvarEntrada">
+            Registrar Entrada
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -249,22 +495,42 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api, { mensagemErro } from '../plugins/axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
+import { baixarPdf } from '../utils/exportarRelatorio';
+import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import { useAuthStore } from '../stores/authStore';
+import { useConfigStore } from '../stores/configStore';
+
+// Submúltiplos aceitos na digitação; o valor é sempre gravado na unidade base
+const SUBUNIDADES = {
+  kg: [{ sigla: 'kg', fator: 1 }, { sigla: 'g', fator: 0.001 }],
+  L: [{ sigla: 'L', fator: 1 }, { sigla: 'mL', fator: 0.001 }],
+};
 
 export default {
   name: 'Reagentes',
   components: {
-    ModalConfirmacao
+    ModalConfirmacao,
+    CabecalhoPagina
+  },
+  setup() {
+    return { auth: useAuthStore(), config: useConfigStore() };
   },
   data() {
     return {
       search: '',
       dialog: false,
       dialogExcluir: false,
+      dialogUso: false,
+      dialogEntrada: false,
       menuData: false,
+      menuDataEntrada: false,
+      salvando: false,
       itemParaExcluir: null,
+      reagenteMov: null,
       dataValidadeObj: null,
+      snackbar: { ativo: false, texto: '', cor: 'success' },
       headers: [
         { title: 'Nome do Reagente', key: 'nome', align: 'start' },
         { title: 'CATMAT', key: 'catmat' },
@@ -276,12 +542,65 @@ export default {
         { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
       ],
       reagentes: [],
-      unidadesMedida: [
-        { idunidademedida: 1, nome: 'Quilograma (kg)' },
-        { idunidademedida: 2, nome: 'Litro (L)' },
-        { idunidademedida: 3, nome: 'Unidade (un)' }
-      ],
-      editedItem: {
+      unidadesMedida: [],
+      editedItem: {},
+      uso: { identrada: null, quantidade: '', fator: 1, observacao: '' },
+      entrada: { lote: '', data_validade: '', quantidade: '', fator: 1, observacao: '' },
+      regras: {
+        obrigatorio: (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'Campo obrigatório',
+        naoNegativo: (v) => Number(v) >= 0 || 'A quantidade não pode ser negativa',
+        positivo: (v) => Number(v) > 0 || 'Informe uma quantidade maior que zero',
+        mesesAlerta: (v) => v === '' || v === null || v === undefined
+          || (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 36) || 'Informe de 1 a 36 meses',
+      },
+    }
+  },
+  computed: {
+    dataMinima() {
+      return new Date();
+    },
+    loteSelecionado() {
+      return this.reagenteMov?.lotes?.find(l => l.identradareagente === this.uso.identrada) || null;
+    },
+    // Quantidade convertida para a unidade base (ex.: 500 g -> 0.5 kg), com 3 casas como no banco
+    quantidadeUsoBase() {
+      return this.paraBase(this.uso.quantidade, this.uso.fator);
+    },
+  },
+  watch: {
+    dataValidadeObj(novaData) {
+      this.editedItem.data_validade = novaData ? this.paraIso(novaData) : '';
+    }
+  },
+  mounted() {
+    this.carregarReagentes();
+    this.carregarUnidadesMedida();
+  },
+  methods: {
+    avisar(texto, cor = 'success') {
+      this.snackbar = { ativo: true, texto, cor };
+    },
+    async carregarReagentes() {
+      try {
+        const resposta = await api.get('/reagentes');
+        this.reagentes = resposta.data;
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao carregar reagentes.'), 'error');
+      }
+    },
+    async carregarUnidadesMedida() {
+      try {
+        const resposta = await api.get('/unidademedidas');
+        this.unidadesMedida = resposta.data.map(u => ({
+          idunidademedida: u.idunidademedida,
+          nome: `${u.nome} (${u.sigla})`
+        }));
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao carregar unidades de medida.'), 'error');
+      }
+    },
+    novoReagente() {
+      return {
         idreagente: null,
         nome: '',
         catmat: '',
@@ -290,97 +609,47 @@ export default {
         lote: '',
         data_validade: '',
         localizacao: '',
-        meses_alerta: 4,
+        meses_alerta: this.config.config.meses_alerta_padrao, // Configurações do Sistema
         descricao: '',
         ativo: 1
-      }
-    }
-  },
-  computed: {
-    dataMinima() {
-      return new Date();
-    }
-  },
-  watch: {
-    dataValidadeObj(novaData) {
-      if (novaData) {
-        const ano = novaData.getFullYear();
-        const mes = String(novaData.getMonth() + 1).padStart(2, '0');
-        const dia = String(novaData.getDate()).padStart(2, '0');
-        this.editedItem.data_validade = `${ano}-${mes}-${dia}`;
-      } else {
-        this.editedItem.data_validade = '';
-      }
-    }
-  },
-  mounted() {
-    this.carregarReagentes();
-    this.carregarUnidadesMedida();
-  },
-  methods: {
-    async carregarReagentes() {
-      try {
-        const resposta = await axios.get('http://127.0.0.1:8000/api/reagentes');
-        this.reagentes = resposta.data;
-      } catch (erro) {
-        console.error('Erro ao carregar reagentes:', erro);
-      }
-    },
-    async carregarUnidadesMedida() {
-      try {
-        const resposta = await axios.get('http://127.0.0.1:8000/api/unidades-medida');
-        if (resposta.data && resposta.data.length > 0) {
-          this.unidadesMedida = resposta.data.map(u => ({
-            idunidademedida: u.idunidademedida || u.id,
-            nome: `${u.nome} (${u.sigla})`
-          }));
-        }
-      } catch (erro) {
-        console.warn('Usando unidades padrão de segurança:', erro);
-      }
+      };
     },
     abrirModalCadastro() {
-      this.editedItem = { 
-        idreagente: null, 
-        nome: '', 
-        catmat: '', 
-        quantidade: '', 
-        idunidademedida: null, 
-        lote: '', 
-        data_validade: '', 
-        localizacao: '', 
-        meses_alerta: 4,
-        descricao: '',
-        ativo: 1 
-      };
+      this.editedItem = this.novoReagente();
       this.dataValidadeObj = null;
       this.dialog = true;
+      this.$nextTick(() => this.$refs.form?.resetValidation());
     },
     async salvarReagente() {
-      if (!this.editedItem.data_validade) {
-        alert('Por favor, selecione a data de validade!');
-        return;
-      }
+      const { valid } = await this.$refs.form.validate();
+      if (!valid) return;
 
+      // Envia só os campos do cadastro (sem lotes/relacionamentos devolvidos pela API)
+      const campos = ['nome', 'catmat', 'idunidademedida', 'lote', 'data_validade', 'localizacao', 'meses_alerta', 'descricao', 'ativo'];
+      const dados = Object.fromEntries(campos.map(c => [c, this.editedItem[c]]));
+      if (dados.meses_alerta === '') dados.meses_alerta = null;
+      if (!this.editedItem.idreagente) dados.quantidade = Number(this.editedItem.quantidade);
+
+      this.salvando = true;
       try {
         if (this.editedItem.idreagente) {
-          await axios.put(`http://127.0.0.1:8000/api/reagentes/${this.editedItem.idreagente}`, this.editedItem);
+          await api.put(`/reagentes/${this.editedItem.idreagente}`, dados);
+          this.avisar('Reagente atualizado com sucesso.');
         } else {
-          await axios.post('http://127.0.0.1:8000/api/reagentes', this.editedItem);
+          await api.post('/reagentes', dados);
+          this.avisar('Reagente cadastrado com sucesso.');
         }
         this.carregarReagentes();
         this.dialog = false;
       } catch (erro) {
-        console.error('Erro ao salvar reagente:', erro);
+        this.avisar(mensagemErro(erro, 'Erro ao salvar reagente.'), 'error');
+      } finally {
+        this.salvando = false;
       }
     },
     editarReagente(item) {
       this.editedItem = { ...item, meses_alerta: item.meses_alerta || 4 };
-      if (item.data_validade) {
-        this.dataValidadeObj = new Date(item.data_validade + 'T00:00:00');
-      } else {
-        this.dataValidadeObj = null;
-      }
+      this.dataValidadeObj = item.data_validade ? new Date(item.data_validade + 'T00:00:00') : null;
       this.dialog = true;
     },
     excluirReagente(item) {
@@ -390,14 +659,116 @@ export default {
     async deletarItemConfirmado() {
       if (this.itemParaExcluir) {
         try {
-          await axios.delete(`http://127.0.0.1:8000/api/reagentes/${this.itemParaExcluir.idreagente}`);
+          await api.delete(`/reagentes/${this.itemParaExcluir.idreagente}`);
+          this.avisar('Reagente excluído com sucesso.');
           this.carregarReagentes();
         } catch (erro) {
-          console.error('Erro ao excluir reagente:', erro);
+          this.avisar(mensagemErro(erro, 'Erro ao excluir reagente.'), 'error');
         }
         this.itemParaExcluir = null;
       }
       this.dialogExcluir = false;
+    },
+
+    // ---------- Registro de uso ----------
+    abrirUso(item) {
+      this.reagenteMov = item;
+      // Sugere o lote que vence primeiro (FEFO)
+      this.uso = { identrada: item.lotes[0]?.identradareagente ?? null, quantidade: '', fator: 1, observacao: '' };
+      this.dialogUso = true;
+      this.$nextTick(() => this.$refs.formUso?.resetValidation());
+    },
+    regraSaldoLote(v) {
+      if (!this.loteSelecionado || !v) return true;
+      if (this.quantidadeUsoBase <= 0) return 'Quantidade muito pequena (mínimo 0,001 na unidade base)';
+      return this.quantidadeUsoBase <= this.loteSelecionado.saldo
+        || `O lote tem apenas ${this.formatarNumero(this.loteSelecionado.saldo)} ${this.sigla(this.reagenteMov)}`;
+    },
+    async salvarUso() {
+      const { valid } = await this.$refs.formUso.validate();
+      if (!valid) return;
+
+      this.salvando = true;
+      try {
+        await api.post('/saidareagentes', {
+          idreagente: this.reagenteMov.idreagente,
+          identrada: this.uso.identrada,
+          quantidade: this.quantidadeUsoBase,
+          observacao: this.uso.observacao || null,
+        });
+        this.avisar(`Uso registrado: ${this.formatarNumero(this.quantidadeUsoBase)} ${this.sigla(this.reagenteMov)} descontado(s).`);
+        this.dialogUso = false;
+        this.carregarReagentes();
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao registrar uso.'), 'error');
+      } finally {
+        this.salvando = false;
+      }
+    },
+
+    // ---------- Entrada de novo lote ----------
+    abrirEntrada(item) {
+      this.reagenteMov = item;
+      this.entrada = { lote: '', data_validade: '', quantidade: '', fator: 1, observacao: '' };
+      this.dialogEntrada = true;
+      this.$nextTick(() => this.$refs.formEntrada?.resetValidation());
+    },
+    async salvarEntrada() {
+      const { valid } = await this.$refs.formEntrada.validate();
+      if (!valid) return;
+
+      const quantidade = this.paraBase(this.entrada.quantidade, this.entrada.fator);
+      if (quantidade <= 0) {
+        this.avisar('Quantidade muito pequena (mínimo 0,001 na unidade base).', 'error');
+        return;
+      }
+
+      this.salvando = true;
+      try {
+        await api.post('/entradareagentes', {
+          idreagente: this.reagenteMov.idreagente,
+          lote: this.entrada.lote,
+          data_validade: this.entrada.data_validade,
+          quantidade,
+          observacao: this.entrada.observacao || null,
+        });
+        this.avisar(`Lote ${this.entrada.lote} adicionado ao estoque.`);
+        this.dialogEntrada = false;
+        this.carregarReagentes();
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao registrar entrada.'), 'error');
+      } finally {
+        this.salvando = false;
+      }
+    },
+
+    // ---------- Utilitários ----------
+    sigla(item) {
+      return item?.unidade_medida?.sigla || '';
+    },
+    opcoesUnidade(item) {
+      const s = this.sigla(item);
+      return SUBUNIDADES[s] || [{ sigla: s || 'un', fator: 1 }];
+    },
+    paraBase(valor, fator) {
+      return Math.round(Number(valor || 0) * Number(fator || 1) * 1000) / 1000;
+    },
+    tituloLote(lote) {
+      if (!lote) return '';
+      return `${lote.lote} — saldo ${this.formatarNumero(lote.saldo)} ${this.sigla(this.reagenteMov)} — val. ${this.formatarDataExibicao(lote.data_validade)}`;
+    },
+    // Impede digitar sinal negativo/exponencial em campos numéricos
+    bloquearSinais(e) {
+      if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
+    },
+    paraIso(data) {
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, '0');
+      const dia = String(data.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    },
+    formatarNumero(valor) {
+      return Number(valor || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
     },
     formatarDataExibicao(dataStr) {
       if (!dataStr) return '';
@@ -407,10 +778,14 @@ export default {
       }
       return dataStr;
     },
+    validadeExibida(item) {
+      return item.proxima_validade || item.data_validade;
+    },
     verificarCorValidade(item) {
-      if (!item.data_validade) return 'success';
+      const data = this.validadeExibida(item);
+      if (!data) return 'success';
       const hoje = new Date();
-      const validade = new Date(item.data_validade + 'T00:00:00');
+      const validade = new Date(data + 'T00:00:00');
       const mesesMargem = Number(item.meses_alerta) || 4;
       const diffMeses = (validade.getFullYear() - hoje.getFullYear()) * 12 + (validade.getMonth() - hoje.getMonth());
 
@@ -418,69 +793,23 @@ export default {
       if (diffMeses <= mesesMargem) return 'warning'; // Próximo de vencer (Amarelo)
       return 'success'; // OK (Verde)
     },
+    // PDF gerado direto no navegador (o antigo window.open era bloqueado como pop-up)
     emitirRelatorio() {
-      const janela = window.open('', '', 'width=900,height=650');
-      
-      const conteudoHTML = `
-        <html>
-          <head>
-            <title>Relatório de Reagentes - LabStock</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-              h2 { text-align: center; color: #004A26; margin-bottom: 5px; }
-              p.sub { text-align: center; color: #666; margin-top: 0; margin-bottom: 30px; font-size: 14px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
-              th { background-color: #004A26; color: white; }
-              tr:nth-child(even) { background-color: #f9f9f9; }
-              .footer { margin-top: 40px; text-align: right; font-size: 11px; color: #777; }
-            </style>
-          </head>
-          <body>
-            <h2>LabStock - Relatório de Reagentes</h2>
-            <p class="sub">Sistema de Gestão para Laboratórios Acadêmicos</p>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome do Reagente</th>
-                  <th>CATMAT</th>
-                  <th>Quantidade</th>
-                  <th>Lote</th>
-                  <th>Validade</th>
-                  <th>Localização</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${this.reagentes.map(r => `
-                  <tr>
-                    <td>${r.nome}</td>
-                    <td>${r.catmat || '-'}</td>
-                    <td>${r.quantidade || '0'}</td>
-                    <td>${r.lote || '-'}</td>
-                    <td>${this.formatarDataExibicao(r.data_validade)}</td>
-                    <td>${r.localizacao || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-
-            <div class="footer">
-              Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
-            </div>
-
-            ${'<' + 'script>'}
-              window.onload = function() {
-                window.print();
-                window.close();
-              }
-            ${'<' + '/script>'}
-          </body>
-        </html>
-      `;
-
-      janela.document.write(conteudoHTML);
-      janela.document.close();
+      baixarPdf({
+        titulo: 'Relatório de Reagentes',
+        subtitulo: `Posição do estoque em ${new Date().toLocaleDateString('pt-BR')}`,
+        nomeArquivo: `labstock-reagentes-${new Date().toISOString().slice(0, 10)}`,
+        tabelas: [{
+          colunas: ['Nome do Reagente', 'CATMAT', 'Quantidade', 'Lotes (saldo / validade)', 'Localização'],
+          linhas: this.reagentes.map(r => [
+            r.nome,
+            r.catmat || '-',
+            `${this.formatarNumero(r.quantidade)} ${this.sigla(r)}`,
+            (r.lotes || []).map(l => `${l.lote}: ${this.formatarNumero(l.saldo)} ${this.sigla(r)} (${this.formatarDataExibicao(l.data_validade)})`).join('\n') || '-',
+            r.localizacao || '-',
+          ]),
+        }],
+      });
     },
     atualizarEstoque() {
       this.carregarReagentes();
