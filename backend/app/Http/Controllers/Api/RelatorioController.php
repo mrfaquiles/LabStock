@@ -113,10 +113,10 @@ class RelatorioController extends Controller
                     'nome' => $item->nome,
                     'catmat' => $item->catmat,
                     'unidade' => $unidadeFixa ?? $item->unidadeMedida?->sigla,
-                    'saldo_inicial' => round($saldoFinal - $entradas + $saidas, 3),
-                    'entradas' => round($entradas, 3),
-                    'saidas' => round($saidas, 3),
-                    'saldo_final' => round($saldoFinal, 3),
+                    'saldo_inicial' => round($saldoFinal - $entradas + $saidas, 6),
+                    'entradas' => round($entradas, 6),
+                    'saidas' => round($saidas, 6),
+                    'saldo_final' => round($saldoFinal, 6),
                     'localizacao' => $item->localizacao ?? null,
                     'status' => $item->status ?? null,
                     'ativo' => (bool) $item->ativo,
@@ -200,8 +200,8 @@ class RelatorioController extends Controller
 
         // Média mensal e quantos meses o estoque atual dura nesse ritmo de consumo
         $resumo = collect($resumo)->map(function ($linha) use ($meses) {
-            $linha['total'] = round($linha['total'], 3);
-            $linha['media_mensal'] = round($linha['total'] / $meses, 3);
+            $linha['total'] = round($linha['total'], 6);
+            $linha['media_mensal'] = round($linha['total'] / $meses, 6);
             $linha['cobertura_meses'] = $linha['media_mensal'] > 0
                 ? round($linha['estoque_atual'] / $linha['media_mensal'], 1)
                 : null;

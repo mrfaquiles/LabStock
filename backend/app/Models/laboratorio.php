@@ -10,10 +10,16 @@ class laboratorio extends Model
     protected $table = 'laboratorios';
     protected $primaryKey = 'idlaboratorio';
     protected $fillable = [
+        'idunidade',
         'nome',
         'descricao',
     ];
-    
+
+    public function unidade()
+    {
+        return $this->belongsTo(unidade::class, 'idunidade', 'idunidade');
+    }
+
     public function reagentes()
     {
         return $this->hasMany(entrada_reagente::class, 'idlaboratorio', 'idlaboratorio');

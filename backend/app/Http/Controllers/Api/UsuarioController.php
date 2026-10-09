@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UsuarioController extends Controller
 {
@@ -20,7 +21,7 @@ class UsuarioController extends Controller
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => ['required', 'string', Password::defaults()],
             'tipo' => ['required', Rule::in(User::PERFIS)],
             'ativo' => 'boolean',
         ]);
@@ -48,7 +49,7 @@ class UsuarioController extends Controller
         $validated = $request->validate([
             'nome' => 'sometimes|required|string|max:255',
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($usuario->id)],
-            'password' => 'nullable|string|min:8',
+            'password' => ['nullable', 'string', Password::defaults()],
             'tipo' => ['sometimes', 'required', Rule::in(User::PERFIS)],
             'ativo' => 'boolean',
         ]);

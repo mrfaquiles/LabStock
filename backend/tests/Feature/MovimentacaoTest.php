@@ -125,6 +125,32 @@ class MovimentacaoTest extends TestCase
         $this->assertEquals(2.5, $lotes['LOT-B']['saldo']);
     }
 
+    public function test_uso_de_fracao_de_grama_e_registrado_sem_arredondar(): void
+    {
+        $r = $this->reagente(['quantidade' => 1]); // 1 kg
+
+        // 0,25 g = 0,00025 kg (antes, com 3 casas, viraria zero)
+        $this->postJson('/api/saidareagentes', [
+            'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'], 'quantidade' => 0.00025,
+        ])->assertCreated();
+
+        $this->assertEqualsWithDelta(0.99975, $this->estoque($r['idreagente']), 1e-9);
+        $this->assertEqualsWithDelta(0.99975, $this->getJson("/api/reagentes/{$r['idreagente']}")->json('lotes.0.saldo'), 1e-9);
+    }
+
+    public function test_mensagem_de_saldo_usa_unidade_legivel(): void
+    {
+        $r = $this->reagente(['quantidade' => 0.5]); // 500 g
+
+        $this->postJson('/api/saidareagentes', [
+            'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'], 'quantidade' => 0.4,
+        ])->assertCreated(); // sobram 100 g
+
+        $this->postJson('/api/saidareagentes', [
+            'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'], 'quantidade' => 0.2,
+        ])->assertStatus(422)->assertJsonPath('message', 'Quantidade indisponível em estoque. Disponível: 100 g');
+    }
+
     public function test_uso_exige_lote(): void
     {
         $r = $this->reagente();
@@ -227,18 +253,38 @@ class MovimentacaoTest extends TestCase
             ->assertJsonValidationErrors(['catmat']);
     }
 
-    public function test_entrada_de_equipamento_atualiza_localizacao(): void
+    public function test_entrada_de_equipamento_soma_no_laboratorio(): void
     {
         $equip = equipamento::create(['nome' => 'Balança Analítica', 'catmat' => '999', 'quantidade' => 0]);
 
         $this->postJson('/api/entradaequipamentos', [
             'idequipamento' => $equip->idequipamento,
             'idlaboratorio' => $this->lab->idlaboratorio,
-            'quantidade' => 1,
-            'observacao' => 'Bancada 03',
+            'quantidade' => 2,
         ])->assertCreated();
 
-        $this->assertEquals('Lab de Química Geral - Bancada 03', $equip->fresh()->localizacao);
+        $this->assertEquals(2, $equip->fresh()->quantidade);
+        $this->getJson("/api/equipamentos/{$equip->idequipamento}")
+            ->assertJsonPath('locais.0.quantidade', 2)
+            ->assertJsonPath('locais.0.laboratorio.nome', 'Lab de Química Geral');
+    }
+
+    public function test_vidraria_guarda_laboratorio_e_local(): void
+    {
+        $unidade = \App\Models\unidade::create(['nome' => 'Unidade 2']);
+        $this->lab->update(['idunidade' => $unidade->idunidade]);
+
+        $id = $this->postJson('/api/vidrarias', [
+            'nome' => 'Proveta 100 mL', 'catmat' => 'VID-03', 'quantidade' => 4,
+            'idlaboratorio' => $this->lab->idlaboratorio, 'localizacao' => 'Armário 2, prateleira de cima',
+        ])->assertCreated()
+          ->assertJsonPath('laboratorio.unidade.nome', 'Unidade 2')
+          ->json('idvidraria');
+
+        $this->putJson("/api/vidrarias/{$id}", ['localizacao' => 'Gaveta 5'])
+            ->assertOk()
+            ->assertJsonPath('localizacao', 'Gaveta 5')
+            ->assertJsonPath('laboratorio.nome', 'Lab de Química Geral');
     }
 
     public function test_vidraria_com_historico_nao_pode_ser_excluida(): void

@@ -44,7 +44,7 @@ class entrada_reagente extends Model
     // Quanto ainda resta deste lote
     public function saldo(): float
     {
-        return round((float) $this->quantidade - (float) $this->saidas()->sum('quantidade'), 3);
+        return round((float) $this->quantidade - (float) $this->saidas()->sum('quantidade'), 6);
     }
 
     // Alias genérico usado pelo MovimentacaoEstoqueController

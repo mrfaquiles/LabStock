@@ -14,8 +14,15 @@ class vidraria extends Model
         'descricao',
         'quantidade',
         'catmat',
+        'idlaboratorio',
+        'localizacao',
         'ativo',
     ];
+
+    public function laboratorio()
+    {
+        return $this->belongsTo(laboratorio::class, 'idlaboratorio', 'idlaboratorio');
+    }
 
     public function entradas()
     {

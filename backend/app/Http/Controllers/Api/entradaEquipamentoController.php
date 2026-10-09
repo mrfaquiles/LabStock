@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\entrada_equipamento;
 use App\Models\equipamento;
-use App\Models\laboratorio;
+use App\Models\equipamento_local;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Registra a chegada de um equipamento em um laboratório.
- * A localização atual do equipamento passa a ser esse laboratório.
+ * Registra a chegada de unidades novas de um equipamento em um laboratório.
  */
 class entradaEquipamentoController extends MovimentacaoEstoqueController
 {
@@ -30,13 +29,20 @@ class entradaEquipamentoController extends MovimentacaoEstoqueController
         ];
     }
 
+    // As unidades novas ficam no laboratório informado
     protected function aposRegistrar(Model $movimentacao, Model $item): void
     {
-        $laboratorio = laboratorio::find($movimentacao->idlaboratorio);
-        // A observação pode detalhar a bancada (ex.: "Bancada 03")
-        $item->localizacao = $movimentacao->observacao
-            ? "{$laboratorio->nome} - {$movimentacao->observacao}"
-            : $laboratorio->nome;
-        $item->save();
+        equipamento_local::doLocal($item->idequipamento, $movimentacao->idlaboratorio)
+            ->increment('quantidade', $movimentacao->quantidade);
+    }
+
+    protected function aoEstornar(Model $movimentacao): ?string
+    {
+        $local = equipamento_local::doLocal($movimentacao->idequipamento, $movimentacao->idlaboratorio);
+        if ($local->quantidade < $movimentacao->quantidade) {
+            return 'Não é possível estornar: as unidades já foram transferidas ou baixadas deste laboratório.';
+        }
+        $local->decrement('quantidade', $movimentacao->quantidade);
+        return null;
     }
 }

@@ -10,6 +10,7 @@
 
     <v-tabs v-model="aba" color="primary" class="mb-4">
       <v-tab value="geral" class="text-none" prepend-icon="mdi-tune-variant">Geral</v-tab>
+      <v-tab value="campus" class="text-none" prepend-icon="mdi-domain">Unidades (campus)</v-tab>
       <v-tab value="laboratorios" class="text-none" prepend-icon="mdi-home-city-outline">Laboratórios</v-tab>
       <v-tab value="unidades" class="text-none" prepend-icon="mdi-scale-balance">Unidades de medida</v-tab>
     </v-tabs>
@@ -107,6 +108,36 @@
                       :rules="[regras.inteiroEntre(1, 72)]"
                     ></v-text-field>
                   </v-col>
+                  <v-col cols="12" sm="6" class="mt-2">
+                    <v-text-field
+                      v-model.number="geral.tempo_compra_meses"
+                      label="Tempo médio de compra *"
+                      type="number"
+                      min="1"
+                      max="24"
+                      suffix="meses"
+                      variant="outlined"
+                      density="comfortable"
+                      hint="Da solicitação até a entrega pela licitação"
+                      persistent-hint
+                      :rules="[regras.inteiroEntre(1, 24)]"
+                    ></v-text-field>
+                  </v-col>
+                  <v-col cols="12" sm="6" class="mt-2">
+                    <v-text-field
+                      v-model.number="geral.margem_seguranca_percentual"
+                      label="Margem de segurança na previsão *"
+                      type="number"
+                      min="0"
+                      max="200"
+                      suffix="%"
+                      variant="outlined"
+                      density="comfortable"
+                      hint="Folga somada à quantidade sugerida para compra"
+                      persistent-hint
+                      :rules="[regras.inteiroEntre(0, 200)]"
+                    ></v-text-field>
+                  </v-col>
                   <v-col cols="12" class="mt-2">
                     <v-switch
                       v-model="geral.vidraria_exige_aprovacao"
@@ -133,6 +164,28 @@
         </v-form>
       </v-window-item>
 
+      <!-- ================= Aba Unidades (campus) ================= -->
+      <v-window-item value="campus">
+        <v-card class="elevation-1 rounded-lg">
+          <div class="d-flex flex-wrap align-center justify-space-between ga-2 pa-4">
+            <span class="text-body-2 text-medium-emphasis">Sedes da instituição. Cada laboratório pertence a uma unidade, e os equipamentos podem ser transferidos entre elas.</span>
+            <v-btn color="primary" class="text-none text-white" prepend-icon="mdi-plus" @click="abrirCadastro('campus')">
+              Nova Unidade
+            </v-btn>
+          </div>
+          <v-divider></v-divider>
+          <v-data-table :headers="headersCampus" :items="campi" :loading="carregando" class="pa-2" no-data-text="Nenhuma unidade cadastrada">
+            <template v-slot:[`item.laboratorios_count`]="{ item }">
+              <v-chip size="small" variant="tonal" color="primary">{{ item.laboratorios_count }}</v-chip>
+            </template>
+            <template v-slot:[`item.acoes`]="{ item }">
+              <v-icon size="small" class="me-2" color="primary" @click="abrirEdicao('campus', item)">mdi-pencil</v-icon>
+              <v-icon size="small" color="error" @click="pedirExclusao('campus', item)">mdi-delete</v-icon>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-window-item>
+
       <!-- ================= Aba Laboratórios ================= -->
       <v-window-item value="laboratorios">
         <v-card class="elevation-1 rounded-lg">
@@ -156,6 +209,10 @@
                   </v-card>
                 </v-menu>
               </div>
+            </template>
+            <template v-slot:[`item.unidade`]="{ item }">
+              <span v-if="item.unidade">{{ item.unidade.nome }}</span>
+              <span v-else class="text-warning text-caption">Sem unidade</span>
             </template>
             <template v-slot:[`item.acoes`]="{ item }">
               <v-icon size="small" class="me-2" color="primary" @click="abrirEdicao('laboratorio', item)">mdi-pencil</v-icon>
@@ -200,7 +257,22 @@
         <v-divider class="mb-4"></v-divider>
         <v-card-text>
           <v-form ref="formItem">
-            <template v-if="tipoItem === 'laboratorio'">
+            <template v-if="tipoItem === 'campus'">
+              <v-text-field v-model="item.nome" label="Nome da unidade *" variant="outlined" density="comfortable" placeholder="Ex.: Unidade 1 - Campus Centro" :rules="[regras.obrigatorio]"></v-text-field>
+              <v-text-field v-model="item.endereco" label="Endereço" variant="outlined" density="comfortable" placeholder="Ex.: Rua X, 100 - Centro"></v-text-field>
+            </template>
+            <template v-else-if="tipoItem === 'laboratorio'">
+              <v-select
+                v-model="item.idunidade"
+                :items="campi"
+                item-title="nome"
+                item-value="idunidade"
+                label="Unidade *"
+                variant="outlined"
+                density="comfortable"
+                no-data-text="Cadastre as unidades na aba Unidades (campus)"
+                :rules="[regras.obrigatorio]"
+              ></v-select>
               <v-text-field v-model="item.nome" label="Nome do laboratório *" variant="outlined" density="comfortable" placeholder="Ex.: Lab. de Química Geral (Bloco B, sala 12)" :rules="[regras.obrigatorio]"></v-text-field>
               <v-textarea v-model="item.descricao" label="Descrição" variant="outlined" density="comfortable" rows="3" placeholder="Ex.: Bancadas 1 a 6, capela de exaustão, armário de ácidos..."></v-textarea>
             </template>
@@ -262,12 +334,20 @@ const salvarGeral = async () => {
 };
 
 // ---------- Laboratórios e unidades ----------
+const campi = ref([]); // unidades da instituição (campus/sedes)
 const laboratorios = ref([]);
-const unidades = ref([]);
+const unidades = ref([]); // unidades de medida
 const carregando = ref(false);
 
+const headersCampus = [
+  { title: 'Unidade', key: 'nome' },
+  { title: 'Endereço', key: 'endereco' },
+  { title: 'Laboratórios', key: 'laboratorios_count' },
+  { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
+];
 const headersLaboratorios = [
   { title: 'Laboratório', key: 'nome' },
+  { title: 'Unidade', key: 'unidade', sortable: false },
   { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
 ];
 const headersUnidades = [
@@ -278,6 +358,7 @@ const headersUnidades = [
 
 // Endpoint e chave primária de cada tipo de cadastro
 const RECURSOS = {
+  campus: { url: '/unidades', id: 'idunidade', nome: 'unidade', novo: 'Nova unidade (campus)', salvo: 'Unidade salva' },
   laboratorio: { url: '/laboratorios', id: 'idlaboratorio', nome: 'laboratório', novo: 'Novo laboratório', salvo: 'Laboratório salvo' },
   unidade: { url: '/unidademedidas', id: 'idunidademedida', nome: 'unidade de medida', novo: 'Nova unidade de medida', salvo: 'Unidade de medida salva' },
 };
@@ -285,7 +366,8 @@ const RECURSOS = {
 const carregarListas = async () => {
   carregando.value = true;
   try {
-    const [labs, unids] = await Promise.all([api.get('/laboratorios'), api.get('/unidademedidas')]);
+    const [sedes, labs, unids] = await Promise.all([api.get('/unidades'), api.get('/laboratorios'), api.get('/unidademedidas')]);
+    campi.value = sedes.data;
     laboratorios.value = labs.data;
     unidades.value = unids.data;
   } catch (err) {
@@ -308,7 +390,12 @@ const tituloDialog = computed(() => {
 
 const abrirCadastro = (tipo) => {
   tipoItem.value = tipo;
-  item.value = tipo === 'laboratorio' ? { nome: '', descricao: '' } : { nome: '', sigla: '' };
+  item.value = {
+    campus: { nome: '', endereco: '' },
+    // Com uma unidade só, já vem selecionada
+    laboratorio: { nome: '', descricao: '', idunidade: campi.value.length === 1 ? campi.value[0].idunidade : null },
+    unidade: { nome: '', sigla: '' },
+  }[tipo];
   dialog.value = true;
   nextTick(() => formItem.value?.resetValidation());
 };
@@ -325,9 +412,11 @@ const salvarItem = async () => {
 
   const recurso = RECURSOS[tipoItem.value];
   const id = item.value[recurso.id];
-  const dados = tipoItem.value === 'laboratorio'
-    ? { nome: item.value.nome, descricao: item.value.descricao || null }
-    : { nome: item.value.nome, sigla: item.value.sigla };
+  const dados = {
+    campus: { nome: item.value.nome, endereco: item.value.endereco || null },
+    laboratorio: { nome: item.value.nome, descricao: item.value.descricao || null, idunidade: item.value.idunidade },
+    unidade: { nome: item.value.nome, sigla: item.value.sigla },
+  }[tipoItem.value];
 
   salvando.value = true;
   try {

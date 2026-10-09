@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\entrada_reagente;
 use App\Models\reagente;
 use App\Models\saida_reagente;
+use App\Support\Quantidade;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -32,6 +33,11 @@ class saidaReagenteController extends MovimentacaoEstoqueController
         ];
     }
 
+    protected function textoQuantidade(float $valor, Model $item): string
+    {
+        return Quantidade::formatar($valor, $item->unidadeMedida?->sigla);
+    }
+
     protected function validarNegocio(array $dados, Model $item): ?string
     {
         // Trava o lote junto com o reagente para o saldo não ser consumido duas vezes
@@ -43,8 +49,8 @@ class saidaReagenteController extends MovimentacaoEstoqueController
 
         $saldo = $entrada->saldo();
         if ((float) $dados['quantidade'] - $saldo > 0.0000001) {
-            $unidade = $item->unidadeMedida?->sigla ?? '';
-            return "O lote {$entrada->lote} tem apenas {$saldo} {$unidade} disponível.";
+            $disponivel = Quantidade::formatar($saldo, $item->unidadeMedida?->sigla);
+            return "O lote {$entrada->lote} tem apenas {$disponivel} disponível.";
         }
 
         return null;

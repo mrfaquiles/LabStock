@@ -62,7 +62,7 @@ class reagente extends Model
                 'lote' => $entrada->lote,
                 'data_validade' => $entrada->data_validade,
                 'quantidade_entrada' => (float) $entrada->quantidade,
-                'saldo' => round((float) $entrada->quantidade - (float) $entrada->saidas_sum_quantidade, 3),
+                'saldo' => round((float) $entrada->quantidade - (float) $entrada->saidas_sum_quantidade, 6),
             ])
             ->filter(fn ($lote) => $lote['saldo'] > 0)
             ->sortBy(fn ($lote) => $lote['data_validade'] ?? '9999-12-31')

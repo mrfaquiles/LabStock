@@ -52,6 +52,8 @@ export const useVidrariaStore = defineStore('vidraria', {
           descricao: vidraria.descricao,
           quantidade: Number(vidraria.quantidade) || 0,
           catmat: vidraria.catmat,
+          idlaboratorio: vidraria.idlaboratorio || null,
+          localizacao: vidraria.localizacao || null,
           ativo: vidraria.ativo==1 ? "1" : "0",
         });
 
@@ -77,6 +79,8 @@ export const useVidrariaStore = defineStore('vidraria', {
           descricao: updated.descricao,
           quantidade: Number(updated.quantidade) || 0,
           catmat: updated.catmat,
+          idlaboratorio: updated.idlaboratorio || null,
+          localizacao: updated.localizacao || null,
           ativo: updated.ativo==1 ? "1" : "0",	
         });
 

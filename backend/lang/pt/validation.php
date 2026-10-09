@@ -21,6 +21,13 @@ return [
         'string' => 'O campo :attribute deve ter no mínimo :min caracteres.',
     ],
     'numeric' => 'O campo :attribute deve ser um número.',
+    'password' => [
+        'letters' => 'A senha deve conter pelo menos uma letra.',
+        'numbers' => 'A senha deve conter pelo menos um número.',
+        'mixed' => 'A senha deve conter letras maiúsculas e minúsculas.',
+        'symbols' => 'A senha deve conter pelo menos um símbolo.',
+        'uncompromised' => 'Esta senha apareceu em vazamentos de dados. Escolha outra.',
+    ],
     'required' => 'O campo :attribute é obrigatório.',
     'string' => 'O campo :attribute deve ser um texto.',
     'unique' => 'Este :attribute já está em uso.',

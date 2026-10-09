@@ -73,12 +73,7 @@
 
         <!-- Quantidade total (soma dos saldos dos lotes) -->
         <template v-slot:[`item.quantidade`]="{ item }">
-          {{ formatarNumero(item.quantidade) }}
-        </template>
-
-        <!-- Unidade de Medida -->
-        <template v-slot:[`item.unidade_medida`]="{ item }">
-          <span>{{ item.unidade_medida?.sigla || item.unidade_medida?.nome || '-' }}</span>
+          {{ formatarQuantidade(item.quantidade, sigla(item)) }}
         </template>
 
         <!-- Lotes com saldo (menu com o detalhe de cada lote) -->
@@ -96,7 +91,7 @@
             <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
               <p class="text-caption font-weight-bold text-blue-grey-darken-4 mb-1">Lotes em estoque</p>
               <div v-for="lote in item.lotes" :key="lote.identradareagente" class="text-body-2 text-blue-grey-darken-4">
-                <strong>{{ lote.lote }}</strong> — {{ formatarNumero(lote.saldo) }} {{ sigla(item) }}
+                <strong>{{ lote.lote }}</strong> — {{ formatarQuantidade(lote.saldo, sigla(item)) }}
                 (val. {{ formatarDataExibicao(lote.data_validade) }})
               </div>
             </v-card>
@@ -168,26 +163,7 @@
                 ></v-text-field>
               </v-col>
 
-              <v-col cols="12" md="4">
-                <!-- Quantidade só no cadastro (lote inicial); depois muda por uso ou nova entrada de lote -->
-                <v-text-field
-                  v-model="editedItem.quantidade"
-                  :label="editedItem.idreagente ? 'Estoque atual' : 'Quantidade (Ex: 0.5) *'"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  variant="outlined"
-                  density="comfortable"
-                  placeholder="Ex.: 0.5"
-                  :disabled="!!editedItem.idreagente"
-                  :hint="editedItem.idreagente ? 'Altere pelo registro de uso ou nova entrada de lote' : 'Na unidade base: 500 g = 0.5 kg'"
-                  persistent-hint
-                  :rules="editedItem.idreagente ? [] : [regras.obrigatorio, regras.naoNegativo]"
-                  @keydown="bloquearSinais"
-                ></v-text-field>
-              </v-col>
-
-              <v-col cols="12" md="4">
+              <v-col cols="12" md="3">
                 <v-select
                   v-model="editedItem.idunidademedida"
                   :items="unidadesMedida"
@@ -198,8 +174,33 @@
                   density="comfortable"
                   no-data-text="Nenhuma unidade cadastrada (rode php artisan db:seed)"
                   placeholder="Selecione"
+                  hint="Unidade em que o estoque é controlado"
+                  persistent-hint
                   :rules="[regras.obrigatorio]"
                 ></v-select>
+              </v-col>
+
+              <v-col cols="12" md="5">
+                <!-- Quantidade só no cadastro (lote inicial); depois muda por uso ou nova entrada de lote -->
+                <v-text-field
+                  v-if="editedItem.idreagente"
+                  :model-value="formatarQuantidade(editedItem.quantidade, siglaCadastro)"
+                  label="Estoque atual"
+                  variant="outlined"
+                  density="comfortable"
+                  disabled
+                  hint="Altere pelo registro de uso ou nova entrada de lote"
+                  persistent-hint
+                ></v-text-field>
+                <CampoQuantidade
+                  v-else
+                  v-model="editedItem.quantidade"
+                  :sigla-base="siglaCadastro"
+                  :disabled="!siglaCadastro"
+                  label="Quantidade inicial *"
+                  placeholder="Ex.: 500"
+                  permite-zero
+                ></CampoQuantidade>
               </v-col>
 
               <v-col cols="12" md="4">
@@ -309,7 +310,7 @@
           </v-btn>
         </v-card-title>
         <v-card-subtitle class="pb-2">
-          {{ reagenteMov?.nome }} — estoque total: {{ formatarNumero(reagenteMov?.quantidade) }} {{ sigla(reagenteMov) }}
+          {{ reagenteMov?.nome }} — estoque total: {{ formatarQuantidade(reagenteMov?.quantidade, sigla(reagenteMov)) }}
         </v-card-subtitle>
 
         <v-divider class="mb-4"></v-divider>
@@ -332,30 +333,16 @@
                 ></v-select>
               </v-col>
 
-              <v-col cols="8">
-                <v-text-field
+              <v-col cols="12">
+                <!-- Digita em g/mg (ou mL/µL) e o sistema converte para a unidade do reagente -->
+                <CampoQuantidade
                   v-model="uso.quantidade"
+                  :sigla-base="sigla(reagenteMov)"
+                  :unidade-inicial="subunidadeUso"
+                  :maximo="loteSelecionado ? loteSelecionado.saldo : null"
                   label="Quantidade utilizada *"
-                  type="number"
-                  min="0"
-                  step="any"
-                  variant="outlined"
-                  density="comfortable"
                   placeholder="Ex.: 500"
-                  :rules="[regras.obrigatorio, regras.positivo, regraSaldoLote]"
-                  @keydown="bloquearSinais"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="4">
-                <v-select
-                  v-model="uso.fator"
-                  :items="opcoesUnidade(reagenteMov)"
-                  item-title="sigla"
-                  item-value="fator"
-                  label="Unidade"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
+                ></CampoQuantidade>
               </v-col>
 
               <v-col cols="12">
@@ -371,10 +358,10 @@
             </v-row>
           </v-form>
 
-          <v-alert v-if="loteSelecionado && quantidadeUsoBase > 0" type="info" variant="tonal" density="compact">
-            Será descontado <strong>{{ formatarNumero(quantidadeUsoBase) }} {{ sigla(reagenteMov) }}</strong>
-            do lote <strong>{{ loteSelecionado.lote }}</strong>.
-            Saldo do lote após o uso: <strong>{{ formatarNumero(loteSelecionado.saldo - quantidadeUsoBase) }} {{ sigla(reagenteMov) }}</strong>.
+          <v-alert v-if="loteSelecionado && quantidadeUsoBase > 0 && quantidadeUsoBase <= loteSelecionado.saldo + 1e-9" type="info" variant="tonal" density="compact">
+            Será descontado <strong>{{ formatarQuantidade(quantidadeUsoBase, sigla(reagenteMov)) }}</strong>
+            ({{ formatarNaBase(quantidadeUsoBase, sigla(reagenteMov)) }}) do lote <strong>{{ loteSelecionado.lote }}</strong>.
+            Saldo do lote após o uso: <strong>{{ formatarQuantidade(loteSelecionado.saldo - quantidadeUsoBase, sigla(reagenteMov)) }}</strong>.
           </v-alert>
         </v-card-text>
 
@@ -442,31 +429,14 @@
                 </v-menu>
               </v-col>
 
-              <v-col cols="8">
-                <v-text-field
+              <v-col cols="12">
+                <!-- Ex.: 10 frascos de 500 mL = 5000 mL (convertido para 5 L) -->
+                <CampoQuantidade
                   v-model="entrada.quantidade"
+                  :sigla-base="sigla(reagenteMov)"
                   label="Quantidade recebida *"
-                  type="number"
-                  min="0"
-                  step="any"
-                  variant="outlined"
-                  density="comfortable"
-                  hint="Ex.: 10 frascos de 1 L = 10 L (todos com a mesma validade)"
-                  persistent-hint
-                  :rules="[regras.obrigatorio, regras.positivo]"
-                  @keydown="bloquearSinais"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="4">
-                <v-select
-                  v-model="entrada.fator"
-                  :items="opcoesUnidade(reagenteMov)"
-                  item-title="sigla"
-                  item-value="fator"
-                  label="Unidade"
-                  variant="outlined"
-                  density="comfortable"
-                ></v-select>
+                  placeholder="Ex.: 10"
+                ></CampoQuantidade>
               </v-col>
 
               <v-col cols="12">
@@ -502,17 +472,15 @@ import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { useAuthStore } from '../stores/authStore';
 import { useConfigStore } from '../stores/configStore';
 
-// Submúltiplos aceitos na digitação; o valor é sempre gravado na unidade base
-const SUBUNIDADES = {
-  kg: [{ sigla: 'kg', fator: 1 }, { sigla: 'g', fator: 0.001 }],
-  L: [{ sigla: 'L', fator: 1 }, { sigla: 'mL', fator: 0.001 }],
-};
+import CampoQuantidade from '../components/CampoQuantidade.vue';
+import { formatarQuantidade, formatarNaBase } from '../utils/unidades';
 
 export default {
   name: 'Reagentes',
   components: {
     ModalConfirmacao,
-    CabecalhoPagina
+    CabecalhoPagina,
+    CampoQuantidade
   },
   setup() {
     return { auth: useAuthStore(), config: useConfigStore() };
@@ -535,7 +503,6 @@ export default {
         { title: 'Nome do Reagente', key: 'nome', align: 'start' },
         { title: 'CATMAT', key: 'catmat' },
         { title: 'Quantidade', key: 'quantidade' },
-        { title: 'Unidade', key: 'unidade_medida' },
         { title: 'Lote', key: 'lote' },
         { title: 'Validade', key: 'data_validade' },
         { title: 'Localização', key: 'localizacao' },
@@ -544,8 +511,9 @@ export default {
       reagentes: [],
       unidadesMedida: [],
       editedItem: {},
-      uso: { identrada: null, quantidade: '', fator: 1, observacao: '' },
-      entrada: { lote: '', data_validade: '', quantidade: '', fator: 1, observacao: '' },
+      // Quantidades já na unidade base (o CampoQuantidade faz a conversão)
+      uso: { identrada: null, quantidade: null, observacao: '' },
+      entrada: { lote: '', data_validade: '', quantidade: null, observacao: '' },
       regras: {
         obrigatorio: (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'Campo obrigatório',
         naoNegativo: (v) => Number(v) >= 0 || 'A quantidade não pode ser negativa',
@@ -562,9 +530,17 @@ export default {
     loteSelecionado() {
       return this.reagenteMov?.lotes?.find(l => l.identradareagente === this.uso.identrada) || null;
     },
-    // Quantidade convertida para a unidade base (ex.: 500 g -> 0.5 kg), com 3 casas como no banco
+    // Já convertida pelo CampoQuantidade (ex.: 500 g -> 0.5 kg)
     quantidadeUsoBase() {
-      return this.paraBase(this.uso.quantidade, this.uso.fator);
+      return Number(this.uso.quantidade || 0);
+    },
+    // Uso costuma ser pesado/medido em g ou mL
+    subunidadeUso() {
+      return { kg: 'g', L: 'mL' }[this.sigla(this.reagenteMov)] || null;
+    },
+    // Sigla da unidade escolhida no cadastro (kg, L, un)
+    siglaCadastro() {
+      return this.unidadesMedida.find(u => u.idunidademedida === this.editedItem.idunidademedida)?.sigla || '';
     },
   },
   watch: {
@@ -593,6 +569,7 @@ export default {
         const resposta = await api.get('/unidademedidas');
         this.unidadesMedida = resposta.data.map(u => ({
           idunidademedida: u.idunidademedida,
+          sigla: u.sigla,
           nome: `${u.nome} (${u.sigla})`
         }));
       } catch (erro) {
@@ -604,7 +581,7 @@ export default {
         idreagente: null,
         nome: '',
         catmat: '',
-        quantidade: '',
+        quantidade: null,
         idunidademedida: null,
         lote: '',
         data_validade: '',
@@ -674,15 +651,9 @@ export default {
     abrirUso(item) {
       this.reagenteMov = item;
       // Sugere o lote que vence primeiro (FEFO)
-      this.uso = { identrada: item.lotes[0]?.identradareagente ?? null, quantidade: '', fator: 1, observacao: '' };
+      this.uso = { identrada: item.lotes[0]?.identradareagente ?? null, quantidade: null, observacao: '' };
       this.dialogUso = true;
       this.$nextTick(() => this.$refs.formUso?.resetValidation());
-    },
-    regraSaldoLote(v) {
-      if (!this.loteSelecionado || !v) return true;
-      if (this.quantidadeUsoBase <= 0) return 'Quantidade muito pequena (mínimo 0,001 na unidade base)';
-      return this.quantidadeUsoBase <= this.loteSelecionado.saldo
-        || `O lote tem apenas ${this.formatarNumero(this.loteSelecionado.saldo)} ${this.sigla(this.reagenteMov)}`;
     },
     async salvarUso() {
       const { valid } = await this.$refs.formUso.validate();
@@ -696,7 +667,7 @@ export default {
           quantidade: this.quantidadeUsoBase,
           observacao: this.uso.observacao || null,
         });
-        this.avisar(`Uso registrado: ${this.formatarNumero(this.quantidadeUsoBase)} ${this.sigla(this.reagenteMov)} descontado(s).`);
+        this.avisar(`Uso registrado: ${this.formatarQuantidade(this.quantidadeUsoBase, this.sigla(this.reagenteMov))} descontado(s) do estoque.`);
         this.dialogUso = false;
         this.carregarReagentes();
       } catch (erro) {
@@ -709,7 +680,7 @@ export default {
     // ---------- Entrada de novo lote ----------
     abrirEntrada(item) {
       this.reagenteMov = item;
-      this.entrada = { lote: '', data_validade: '', quantidade: '', fator: 1, observacao: '' };
+      this.entrada = { lote: '', data_validade: '', quantidade: null, observacao: '' };
       this.dialogEntrada = true;
       this.$nextTick(() => this.$refs.formEntrada?.resetValidation());
     },
@@ -717,11 +688,7 @@ export default {
       const { valid } = await this.$refs.formEntrada.validate();
       if (!valid) return;
 
-      const quantidade = this.paraBase(this.entrada.quantidade, this.entrada.fator);
-      if (quantidade <= 0) {
-        this.avisar('Quantidade muito pequena (mínimo 0,001 na unidade base).', 'error');
-        return;
-      }
+      const quantidade = Number(this.entrada.quantidade); // já na unidade base
 
       this.salvando = true;
       try {
@@ -746,16 +713,12 @@ export default {
     sigla(item) {
       return item?.unidade_medida?.sigla || '';
     },
-    opcoesUnidade(item) {
-      const s = this.sigla(item);
-      return SUBUNIDADES[s] || [{ sigla: s || 'un', fator: 1 }];
-    },
-    paraBase(valor, fator) {
-      return Math.round(Number(valor || 0) * Number(fator || 1) * 1000) / 1000;
-    },
+    // "0,5 g" em vez de "0,0005 kg"
+    formatarQuantidade,
+    formatarNaBase,
     tituloLote(lote) {
       if (!lote) return '';
-      return `${lote.lote} — saldo ${this.formatarNumero(lote.saldo)} ${this.sigla(this.reagenteMov)} — val. ${this.formatarDataExibicao(lote.data_validade)}`;
+      return `${lote.lote} — saldo ${this.formatarQuantidade(lote.saldo, this.sigla(this.reagenteMov))} — val. ${this.formatarDataExibicao(lote.data_validade)}`;
     },
     // Impede digitar sinal negativo/exponencial em campos numéricos
     bloquearSinais(e) {
@@ -804,8 +767,8 @@ export default {
           linhas: this.reagentes.map(r => [
             r.nome,
             r.catmat || '-',
-            `${this.formatarNumero(r.quantidade)} ${this.sigla(r)}`,
-            (r.lotes || []).map(l => `${l.lote}: ${this.formatarNumero(l.saldo)} ${this.sigla(r)} (${this.formatarDataExibicao(l.data_validade)})`).join('\n') || '-',
+            this.formatarQuantidade(r.quantidade, this.sigla(r)),
+            (r.lotes || []).map(l => `${l.lote}: ${this.formatarQuantidade(l.saldo, this.sigla(r))} (${this.formatarDataExibicao(l.data_validade)})`).join('\n') || '-',
             r.localizacao || '-',
           ]),
         }],

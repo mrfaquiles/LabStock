@@ -27,6 +27,8 @@ class ConfiguracaoController extends Controller
             'responsavel_tecnico' => 'nullable|string|max:150',
             'meses_alerta_padrao' => 'sometimes|required|integer|min:1|max:36',
             'cobertura_minima_meses' => 'sometimes|required|integer|min:1|max:24',
+            'tempo_compra_meses' => 'sometimes|required|integer|min:1|max:24',
+            'margem_seguranca_percentual' => 'sometimes|required|integer|min:0|max:200',
             'vidraria_exige_aprovacao' => 'sometimes|boolean',
             'sessao_horas' => 'sometimes|required|integer|min:1|max:72',
         ], [], [
@@ -36,6 +38,8 @@ class ConfiguracaoController extends Controller
             'meses_alerta_padrao' => 'alerta de vencimento padrão',
             'cobertura_minima_meses' => 'cobertura mínima',
             'sessao_horas' => 'duração da sessão',
+            'tempo_compra_meses' => 'tempo médio de compra',
+            'margem_seguranca_percentual' => 'margem de segurança',
         ]);
 
         Configuracao::salvar($dados);

@@ -14,7 +14,7 @@ class vidrariaController extends Controller
     public function index()
     {
         //
-        $vidrarias = vidraria::all();
+        $vidrarias = vidraria::with('laboratorio.unidade')->orderBy('nome')->get();
         return response()->json($vidrarias, 200);
     }
 
@@ -29,11 +29,13 @@ class vidrariaController extends Controller
             'catmat' => 'required|string|max:50',
             'quantidade' => 'nullable|integer|min:0',
             'descricao' => 'nullable|string',
+            'idlaboratorio' => 'nullable|exists:laboratorios,idlaboratorio',
+            'localizacao' => 'nullable|string|max:255',
             'ativo' => 'boolean',
         ]);
         $dados['quantidade'] = $dados['quantidade'] ?? 0;
         $vidraria = vidraria::create($dados);
-        return response()->json($vidraria, 201);
+        return response()->json($vidraria->load('laboratorio.unidade'), 201);
     }
 
     /**
@@ -42,7 +44,7 @@ class vidrariaController extends Controller
     public function show(string $id)
     {
         //
-        $vidraria = vidraria::find($id);
+        $vidraria = vidraria::with('laboratorio.unidade')->find($id);
         if (!$vidraria) {
             return response()->json(['message' => 'Vidraria não encontrada'], 404);
         }
@@ -64,10 +66,12 @@ class vidrariaController extends Controller
             'catmat' => 'sometimes|required|string|max:50',
             'quantidade' => 'sometimes|integer|min:0',
             'descricao' => 'nullable|string',
+            'idlaboratorio' => 'nullable|exists:laboratorios,idlaboratorio',
+            'localizacao' => 'nullable|string|max:255',
             'ativo' => 'boolean',
         ]);
         $vidraria->update($dados);
-        return response()->json($vidraria, 200);
+        return response()->json($vidraria->load('laboratorio.unidade'), 200);
     }
 
     /**

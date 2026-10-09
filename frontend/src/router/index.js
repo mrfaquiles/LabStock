@@ -8,6 +8,7 @@ import Equipamentos from '../views/Equipamentos.vue'
 import Usuarios from '../views/Usuarios.vue'
 import Relatorios from '../views/Relatorios.vue'
 import Configuracoes from '../views/Configuracoes.vue'
+import Compras from '../views/Compras.vue'
 
 const routes = [
   { path: '/login', name: 'Login', component: Login, meta: { publica: true } },
@@ -15,6 +16,7 @@ const routes = [
   { path: '/reagentes', name: 'Reagentes', component: Reagentes },
   { path: '/vidrarias', name: 'Vidrarias', component: Vidrarias },
   { path: '/equipamentos', name: 'Equipamentos', component: Equipamentos },
+  { path: '/compras', name: 'Compras', component: Compras },
   { path: '/relatorios', name: 'Relatorios', component: Relatorios },
   { path: '/configuracoes', name: 'Configuracoes', component: Configuracoes, meta: { perfis: ['admin'] } },
   { path: '/usuarios', name: 'Usuarios', component: Usuarios, meta: { perfis: ['admin'] } },

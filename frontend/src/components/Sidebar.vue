@@ -25,6 +25,7 @@
       <v-list-item prepend-icon="mdi-flask" title="Reagentes" to="/reagentes" rounded="lg" class="mb-1"></v-list-item>
       <v-list-item prepend-icon="mdi-cup" title="Vidrarias" to="/vidrarias" rounded="lg" class="mb-1"></v-list-item>
       <v-list-item prepend-icon="mdi-tools" title="Equipamentos" to="/equipamentos" rounded="lg" class="mb-1"></v-list-item>
+      <v-list-item prepend-icon="mdi-cart-outline" title="Compras" to="/compras" rounded="lg" class="mb-1"></v-list-item>
       <v-list-item prepend-icon="mdi-file-chart" title="Relatórios" to="/relatorios" rounded="lg" class="mb-1"></v-list-item>
     </v-list>
 

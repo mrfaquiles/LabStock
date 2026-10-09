@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConfiguracaoController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\PedidoCompraController;
 use App\Http\Controllers\Api\RelatorioController;
 use App\Http\Controllers\Api\laboratorioController;
 use App\Http\Controllers\Api\vidrariaController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Api\entradaEquipamentoController;
 use App\Http\Controllers\Api\saidaEquipamentoController;
 use App\Http\Controllers\Api\UnidadeMedidaController;
 use App\Http\Controllers\Api\UsuarioController;
+use App\Http\Controllers\Api\unidadeController;
 
 // Recursos de estoque: leitura liberada a todos os perfis, escrita apenas para admin/técnico
 $recursosEstoque = [
@@ -27,6 +29,7 @@ $recursosEstoque = [
     'entradaequipamentos' => entradaEquipamentoController::class,
     'saidaequipamentos' => saidaEquipamentoController::class,
     'laboratorios' => laboratorioController::class,
+    'unidades' => unidadeController::class,
     'vidrarias' => vidrariaController::class,
     'reagentes' => reagenteController::class,
     'equipamentos' => equipamentoController::class,
@@ -43,16 +46,26 @@ Route::middleware('auth:sanctum')->group(function () use ($recursosEstoque) {
     Route::get('relatorios/gastos', [RelatorioController::class, 'gastos']);
     Route::get('configuracoes', [ConfiguracaoController::class, 'index']);
 
+    // Compras: previsão para a licitação e acompanhamento dos pedidos
+    Route::get('compras/previsao', [PedidoCompraController::class, 'previsao']);
+    Route::apiResource('pedidoscompra', PedidoCompraController::class)->only(['index', 'show']);
+    Route::middleware('perfil:admin,tecnico')->group(function () {
+        Route::apiResource('pedidoscompra', PedidoCompraController::class)->except(['index', 'show']);
+        Route::post('pedidoscompra/{id}/receber', [PedidoCompraController::class, 'receber']);
+    });
+
     // Todos os perfis (admin, tecnico, consulta)
     foreach ($recursosEstoque as $recurso => $controller) {
         Route::apiResource($recurso, $controller)->only(['index', 'show']);
     }
+    Route::get('equipamentos/{id}/historico', [equipamentoController::class, 'historico']);
 
     // Cadastro e movimentação de estoque
     Route::middleware('perfil:admin,tecnico')->group(function () use ($recursosEstoque) {
         foreach ($recursosEstoque as $recurso => $controller) {
             Route::apiResource($recurso, $controller)->except(['index', 'show']);
         }
+        Route::post('equipamentos/{id}/transferir', [equipamentoController::class, 'transferir']);
     });
 
     // Baixa de vidraria: qualquer perfil solicita (e cancela a própria pendente); o admin decide

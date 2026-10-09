@@ -50,9 +50,24 @@ abstract class MovimentacaoEstoqueController extends Controller
         return $dados;
     }
 
+    /** Quantidade escrita nas mensagens (reagentes usam a unidade mais legível: g, mg, mL...). */
+    protected function textoQuantidade(float $valor, Model $item): string
+    {
+        return rtrim(rtrim(number_format($valor, 6, ',', '.'), '0'), ',') . ' un';
+    }
+
     /** Ações após registrar (ex.: atualizar a localização do equipamento). */
     protected function aposRegistrar(Model $movimentacao, Model $item): void
     {
+    }
+
+    /**
+     * Validação/ajustes ao estornar (ex.: devolver o equipamento ao laboratório).
+     * Retorna a mensagem de erro ou null.
+     */
+    protected function aoEstornar(Model $movimentacao): ?string
+    {
+        return null;
     }
 
     /**
@@ -80,9 +95,10 @@ abstract class MovimentacaoEstoqueController extends Controller
             // Trava o item para evitar duas baixas simultâneas do mesmo estoque
             $item = $this->itemModel::lockForUpdate()->find($dados[$this->itemChave]);
 
-            if ($this->saida && (float) $dados['quantidade'] > (float) $item->quantidade) {
+            // Tolerância mínima para arredondamento de casas decimais (ex.: 0,1 + 0,2)
+            if ($this->saida && (float) $dados['quantidade'] - (float) $item->quantidade > 1e-9) {
                 return response()->json([
-                    'message' => "Quantidade indisponível em estoque. Disponível: " . (float) $item->quantidade,
+                    'message' => 'Quantidade indisponível em estoque. Disponível: ' . $this->textoQuantidade((float) $item->quantidade, $item),
                 ], 422);
             }
 
@@ -146,6 +162,10 @@ abstract class MovimentacaoEstoqueController extends Controller
                 return response()->json([
                     'message' => 'Não é possível estornar: parte desta entrada já saiu do estoque.',
                 ], 422);
+            }
+
+            if ($erro = $this->aoEstornar($movimentacao)) {
+                return response()->json(['message' => $erro], 422);
             }
 
             $this->saida

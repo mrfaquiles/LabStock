@@ -95,6 +95,15 @@
         </template>
 
         <!-- Quantidade, com aviso de baixas pendentes -->
+        <template v-slot:[`item.local`]="{ item }">
+          <div v-if="item.laboratorio" class="d-flex align-center">
+            <v-icon size="small" color="primary" class="me-1">mdi-map-marker</v-icon>
+            <span>{{ nomeLocal(item.laboratorio) }}</span>
+          </div>
+          <div v-if="item.localizacao" class="text-caption text-medium-emphasis">{{ item.localizacao }}</div>
+          <span v-if="!item.laboratorio && !item.localizacao" class="text-caption text-grey">Não informado</span>
+        </template>
+
         <template v-slot:[`item.quantidade`]="{ item }">
           {{ item.quantidade }}
           <v-chip v-if="pendentePorVidraria[item.idvidraria]" size="x-small" color="warning" variant="tonal" class="ms-1">
@@ -238,6 +247,24 @@
               </v-col>
               <v-col cols="12" md="3">
                 <v-switch v-model="form.ativo" label="Ativo *" color="success" density="comfortable"></v-switch>
+              </v-col>
+
+              <!-- Onde a vidraria fica -->
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.idlaboratorio"
+                  :items="opcoesLaboratorios"
+                  item-title="titulo"
+                  item-value="idlaboratorio"
+                  label="Laboratório (unidade › laboratório)"
+                  variant="outlined"
+                  density="comfortable"
+                  clearable
+                  no-data-text="Cadastre os laboratórios em Configurações"
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field v-model="form.localizacao" label="Local (armário, prateleira, gaveta)" variant="outlined" density="comfortable" placeholder="Ex.: Armário 2, prateleira de cima"></v-text-field>
               </v-col>
             </v-row>
           </v-form>
@@ -384,13 +411,26 @@ const STATUS = {
 const dialog = ref(false);
 const dialogExcluir = ref(false);
 const itemParaExcluir = ref(null);
-const form = ref({ idvidraria: null, nome: '', descricao: '', quantidade: 0, catmat: '', ativo: true });
+const form = ref({ idvidraria: null, nome: '', descricao: '', quantidade: 0, catmat: '', ativo: true, idlaboratorio: null, localizacao: '' });
+
+// Laboratórios para o campo "onde está" ("Unidade 1 › Lab. de Química")
+const laboratorios = ref([]);
+const nomeLocal = (lab) => (lab ? `${lab.unidade ? `${lab.unidade.nome} › ` : ''}${lab.nome}` : '');
+const opcoesLaboratorios = computed(() => laboratorios.value
+  .map((l) => ({ idlaboratorio: l.idlaboratorio, titulo: nomeLocal(l) }))
+  .sort((a, b) => a.titulo.localeCompare(b.titulo)));
+const carregarLaboratorios = async () => {
+  try {
+    laboratorios.value = (await api.get('/laboratorios')).data;
+  } catch { /* sem laboratórios o campo fica vazio */ }
+};
 const search = ref('');
 const snackbar = ref({ ativo: false, texto: '', cor: 'success' });
 const headers = [
   { title: 'Nome do Item', key: 'nome', align: 'start' },
   { title: 'CATMAT', key: 'catmat' },
   { title: 'Quantidade', key: 'quantidade' },
+  { title: 'Onde está', key: 'local', sortable: false },
   { title: 'Ativo', key: 'ativo' },
   { title: 'Ações', key: 'acoes', sortable: false, align: 'end' }
 ];
@@ -467,6 +507,7 @@ const carregarSolicitacoes = async () => {
 const carregarTudo = () => {
   vidrariaStore.fetchVidrarias();
   carregarSolicitacoes();
+  carregarLaboratorios();
 };
 
 onMounted(carregarTudo);
@@ -569,7 +610,7 @@ const cancelar = async (item) => {
 
 // ---------- Cadastro de vidrarias ----------
 const abrirModalCadastro = () => {
-    form.value = { idvidraria: null, nome: '', descricao: '', quantidade: 0, catmat: '', ativo: true };
+    form.value = { idvidraria: null, nome: '', descricao: '', quantidade: 0, catmat: '', ativo: true, idlaboratorio: laboratorios.value.length === 1 ? laboratorios.value[0].idlaboratorio : null, localizacao: '' };
     dialog.value = true;
 }
 
@@ -594,11 +635,12 @@ const emitirRelatorio = () => {
     subtitulo: `Posição do estoque em ${new Date().toLocaleDateString('pt-BR')}`,
     nomeArquivo: `labstock-vidrarias-${new Date().toISOString().slice(0, 10)}`,
     tabelas: [{
-      colunas: ['Nome do Item', 'CATMAT', 'Quantidade', 'Baixas pendentes', 'Situação'],
+      colunas: ['Nome do Item', 'CATMAT', 'Quantidade', 'Onde está', 'Baixas pendentes', 'Situação'],
       linhas: vidrariaStore.getAllVidrarias.map(v => [
         v.nome,
         v.catmat || '-',
         `${v.quantidade} un`,
+        [nomeLocal(v.laboratorio), v.localizacao].filter(Boolean).join('\n') || '-',
         pendentePorVidraria.value[v.idvidraria] ? `${pendentePorVidraria.value[v.idvidraria]} un` : '-',
         Number(v.ativo) ? 'Ativo' : 'Inativo',
       ]),

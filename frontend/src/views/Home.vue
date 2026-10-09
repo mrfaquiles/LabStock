@@ -14,6 +14,19 @@
     <v-alert v-if="erro" type="error" variant="tonal" class="mb-4">{{ erro }}</v-alert>
 
     <v-alert
+      v-if="dados?.compras_pedir_agora"
+      type="error"
+      variant="tonal"
+      icon="mdi-cart-alert"
+      class="mb-4"
+    >
+      <strong>{{ dados.compras_pedir_agora }} item(ns) precisam ser pedidos agora</strong>:
+      o estoque não dura até uma compra nova chegar (cerca de {{ config.config.tempo_compra_meses }} meses de licitação).
+      <span class="text-medium-emphasis">{{ dados.compras_pedir_agora_itens.join(', ') }}{{ dados.compras_pedir_agora > 5 ? '…' : '' }}.</span>
+      <router-link to="/compras" class="font-weight-bold">Ver previsão de compras</router-link>
+    </v-alert>
+
+    <v-alert
       v-if="auth.isAdmin && dados?.baixas_vidraria_pendentes"
       type="warning"
       variant="tonal"
@@ -83,8 +96,10 @@ import { ref, computed, onMounted } from 'vue';
 import api from '../plugins/axios';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { useAuthStore } from '../stores/authStore';
+import { useConfigStore } from '../stores/configStore';
 
 const auth = useAuthStore();
+const config = useConfigStore();
 const dados = ref(null);
 const loading = ref(false);
 const erro = ref('');

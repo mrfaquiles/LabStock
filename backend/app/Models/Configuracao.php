@@ -28,6 +28,11 @@ class Configuracao extends Model
         'meses_alerta_padrao' => ['padrao' => 4, 'tipo' => 'int'],
         'cobertura_minima_meses' => ['padrao' => 3, 'tipo' => 'int'],
 
+        // Compras: quanto tempo a licitação costuma levar até a entrega
+        // e a folga aplicada na previsão de compras
+        'tempo_compra_meses' => ['padrao' => 6, 'tipo' => 'int'],
+        'margem_seguranca_percentual' => ['padrao' => 20, 'tipo' => 'int'],
+
         // Vidrarias: baixa precisa da aprovação do administrador
         'vidraria_exige_aprovacao' => ['padrao' => true, 'tipo' => 'bool'],
 

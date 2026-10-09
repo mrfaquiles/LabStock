@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Configuracao;
 use App\Models\equipamento;
+use App\Models\pedido_compra;
+use App\Services\PrevisaoCompras;
 use App\Models\reagente;
 use App\Models\saida_vidraria;
 use App\Models\vidraria;
@@ -15,9 +18,14 @@ class DashboardController extends Controller
      * Resumo do estoque e alertas de vencimento de reagentes.
      * Cada reagente usa o próprio `meses_alerta` (padrão 4) como antecedência.
      */
-    public function index()
+    public function index(PrevisaoCompras $previsao)
     {
         $hoje = Carbon::today();
+
+        // Itens cujo estoque não dura até uma compra nova chegar (tempo de licitação)
+        $pedirAgora = collect($previsao->calcular(
+            12, 12, Configuracao::valor('margem_seguranca_percentual'), ['reagentes', 'vidrarias']
+        ))->where('situacao', 'pedir_agora')->values();
 
         $reagentes = reagente::comLotes()->where('ativo', 1)->get();
 
@@ -73,6 +81,9 @@ class DashboardController extends Controller
                 ->where('data', '>=', $hoje->copy()->subDays(30)->toDateString())
                 ->sum('quantidade'),
             'baixas_vidraria_pendentes' => saida_vidraria::where('status', saida_vidraria::PENDENTE)->count(),
+            'compras_pedir_agora' => $pedirAgora->count(),
+            'compras_pedir_agora_itens' => $pedirAgora->pluck('nome')->take(5)->all(),
+            'pedidos_em_andamento' => pedido_compra::emAndamento()->count(),
         ], 200);
     }
 }

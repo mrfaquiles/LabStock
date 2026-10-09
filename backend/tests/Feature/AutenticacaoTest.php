@@ -92,6 +92,46 @@ class AutenticacaoTest extends TestCase
         $this->assertTrue(password_verify('senha-segura-1', $criado->password));
     }
 
+    public function test_senha_fraca_e_recusada(): void
+    {
+        Sanctum::actingAs($this->usuario('admin'));
+
+        $this->postJson('/api/usuarios', [
+            'nome' => 'Fulano', 'email' => 'fulano@labstock.local', 'password' => 'somenteletras', 'tipo' => 'consulta',
+        ])->assertStatus(422)->assertJsonPath('errors.password.0', 'A senha deve conter pelo menos um número.');
+    }
+
+    public function test_api_tem_limite_de_requisicoes(): void
+    {
+        Sanctum::actingAs($this->usuario('consulta'));
+
+        for ($i = 0; $i < 120; $i++) {
+            $this->getJson('/api/me')->assertOk();
+        }
+        $this->getJson('/api/me')->assertStatus(429);
+    }
+
+    public function test_cors_so_libera_o_frontend(): void
+    {
+        $this->options('/api/login', [], [
+            'Origin' => 'http://site-malicioso.com',
+            'Access-Control-Request-Method' => 'POST',
+        ])->assertHeaderMissing('Access-Control-Allow-Origin');
+
+        $this->options('/api/login', [], [
+            'Origin' => 'http://localhost:5173',
+            'Access-Control-Request-Method' => 'POST',
+        ])->assertHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+    }
+
+    public function test_senha_e_guardada_com_bcrypt(): void
+    {
+        $usuario = $this->usuario('tecnico');
+
+        $this->assertStringStartsWith('$2y$', $usuario->getAttributes()['password']);
+        $this->assertArrayNotHasKey('password', $usuario->toArray());
+    }
+
     public function test_admin_nao_remove_o_proprio_acesso(): void
     {
         $admin = $this->usuario('admin');
