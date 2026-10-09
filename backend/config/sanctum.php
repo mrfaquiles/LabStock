@@ -50,7 +50,9 @@ return [
     |
     */
 
-    'expiration' => null,
+    // A validade de cada login vem de Configurações do Sistema (duração da sessão).
+    // Este é só o teto de segurança, em minutos: 72h, o máximo permitido na tela.
+    'expiration' => env('SANCTUM_EXPIRATION', 4320),
 
     /*
     |--------------------------------------------------------------------------

@@ -24,11 +24,15 @@ class vidrariaController extends Controller
     public function store(Request $request)
     {
         //
-        $request->validate([
+        $dados = $request->validate([
             'nome' => 'required|string|max:255',
+            'catmat' => 'required|string|max:50',
+            'quantidade' => 'nullable|integer|min:0',
             'descricao' => 'nullable|string',
+            'ativo' => 'boolean',
         ]);
-        $vidraria = vidraria::create($request->all());
+        $dados['quantidade'] = $dados['quantidade'] ?? 0;
+        $vidraria = vidraria::create($dados);
         return response()->json($vidraria, 201);
     }
 
@@ -55,7 +59,14 @@ class vidrariaController extends Controller
         if (!$vidraria) {
             return response()->json(['message' => 'Vidraria não encontrada'], 404);
         }
-        $vidraria->update($request->all());
+        $dados = $request->validate([
+            'nome' => 'sometimes|required|string|max:255',
+            'catmat' => 'sometimes|required|string|max:50',
+            'quantidade' => 'sometimes|integer|min:0',
+            'descricao' => 'nullable|string',
+            'ativo' => 'boolean',
+        ]);
+        $vidraria->update($dados);
         return response()->json($vidraria, 200);
     }
 

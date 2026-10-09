@@ -2,48 +2,56 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
+    public const PERFIL_ADMIN = 'admin';
+    public const PERFIL_TECNICO = 'tecnico';
+    public const PERFIL_CONSULTA = 'consulta';
+
+    public const PERFIS = [
+        self::PERFIL_ADMIN,
+        self::PERFIL_TECNICO,
+        self::PERFIL_CONSULTA,
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+    protected $fillable = [
+        'nome',
+        'email',
+        'password',
+        'tipo',
+        'ativo',
+    ];
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'ativo' => 'boolean',
         ];
+    }
+
+    public function temPerfil(string ...$perfis): bool
+    {
+        return in_array($this->tipo, $perfis, true);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->tipo === self::PERFIL_ADMIN;
     }
 }

@@ -2,75 +2,51 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\saidaReagente;
-use Illuminate\Http\Request;
+use App\Models\entrada_reagente;
+use App\Models\reagente;
+use App\Models\saida_reagente;
+use Illuminate\Database\Eloquent\Model;
 
-class saidaReagenteController extends Controller
+/**
+ * Registro de uso de reagente: quem usou informa quanto gastou (na unidade base,
+ * ex.: 500 g = 0.5 kg) e de qual lote saiu. O valor é descontado do saldo do lote
+ * e do estoque total do reagente.
+ */
+class saidaReagenteController extends MovimentacaoEstoqueController
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    protected string $model = saida_reagente::class;
+    protected string $itemModel = reagente::class;
+    protected string $itemChave = 'idreagente';
+    protected bool $saida = true;
+    protected string $nome = 'Saída de reagente';
+    protected array $relacoes = ['usuario:id,nome,email', 'entrada'];
+
+    protected function regras(): array
     {
-        //
-        $saidaReagentes = saidaReagente::all();
-        return response()->json($saidaReagentes, 200);
+        return [
+            'idreagente' => 'required|exists:reagentes,idreagente',
+            'identrada' => 'required|exists:entrada_reagentes,identradareagente',
+            'quantidade' => 'required|numeric|gt:0',
+            'data' => 'nullable|date',
+            'observacao' => 'nullable|string|max:255',
+        ];
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    protected function validarNegocio(array $dados, Model $item): ?string
     {
-        //
-        $request->validate([
-            'reagente_id' => 'required|exists:reagentes,id',
-            'quantidade' => 'required|numeric|min:0',
-            'data_saida' => 'required|date',
-        ]);
-        $saidaReagente = saidaReagente::create($request->all());
-        return response()->json($saidaReagente, 201);
-    }
+        // Trava o lote junto com o reagente para o saldo não ser consumido duas vezes
+        $entrada = entrada_reagente::lockForUpdate()->find($dados['identrada']);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-        $saidaReagente = saidaReagente::find($id);
-        if (!$saidaReagente) {
-            return response()->json(['message' => 'Saída de reagente não encontrada'], 404);
+        if ((int) $entrada->idreagente !== (int) $item->idreagente) {
+            return 'O lote informado não pertence a este reagente.';
         }
-        return response()->json($saidaReagente, 200);
-    }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-        $saidaReagente = saidaReagente::find($id);
-        if (!$saidaReagente) {
-            return response()->json(['message' => 'Saída de reagente não encontrada'], 404);
+        $saldo = $entrada->saldo();
+        if ((float) $dados['quantidade'] - $saldo > 0.0000001) {
+            $unidade = $item->unidadeMedida?->sigla ?? '';
+            return "O lote {$entrada->lote} tem apenas {$saldo} {$unidade} disponível.";
         }
-        $saidaReagente->update($request->all());
-        return response()->json($saidaReagente, 200);
-    }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-        $saidaReagente = saidaReagente::find($id);
-        if (!$saidaReagente) {
-            return response()->json(['message' => 'Saída de reagente não encontrada'], 404);
-        }
-        $saidaReagente->delete();
-        return response()->json(['message' => 'Saída de reagente excluída com sucesso'], 200);
+        return null;
     }
 }

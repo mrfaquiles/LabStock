@@ -22,11 +22,11 @@ class UnidadeMedidaController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $dados = $request->validate([
             'nome' => 'required|string|max:255',
-            'descricao' => 'nullable|string',
+            'sigla' => 'required|string|max:3',
         ]);
-        $unidadeMedida = unidade_medida::create($request->all());
+        $unidadeMedida = unidade_medida::create($dados);
         return response()->json($unidadeMedida, 201);
     }
 
@@ -51,7 +51,11 @@ class UnidadeMedidaController extends Controller
         if (!$unidadeMedida) {
             return response()->json(['message' => 'Unidade de medida não encontrada'], 404);
         }
-        $unidadeMedida->update($request->all());
+        $dados = $request->validate([
+            'nome' => 'sometimes|required|string|max:255',
+            'sigla' => 'sometimes|required|string|max:3',
+        ]);
+        $unidadeMedida->update($dados);
         return response()->json($unidadeMedida, 200);
     }
 

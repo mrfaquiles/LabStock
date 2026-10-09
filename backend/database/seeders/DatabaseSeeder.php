@@ -15,11 +15,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(UnidadeMedidaSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Administrador inicial — troque a senha após o primeiro acesso
+        User::firstOrCreate(
+            ['email' => env('ADMIN_EMAIL', 'admin@labstock.local')],
+            [
+                'nome' => 'Administrador',
+                'password' => env('ADMIN_PASSWORD', 'labstock@2026'),
+                'tipo' => User::PERFIL_ADMIN,
+                'ativo' => 1,
+            ]
+        );
     }
 }

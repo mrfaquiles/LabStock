@@ -25,11 +25,11 @@ class equipamento extends Model
 
     public function entradas()
     {
-        return $this->hasMany(entrada_equipamentos::class, 'idequipamento', 'idequipamento');
+        return $this->hasMany(entrada_equipamento::class, 'idequipamento', 'idequipamento');
     }
 
     public function saidas()
     {
-        return $this->hasMany(saida_equipamentos::class, 'idequipamento', 'idequipamento');
+        return $this->hasMany(saida_equipamento::class, 'idequipamento', 'idequipamento');
     }
 }

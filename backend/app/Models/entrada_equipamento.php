@@ -30,6 +30,12 @@ class entrada_equipamento extends Model
 
     public function usuario()
     {
-        return $this->belongsTo(usuario::class, 'idusuario', 'idusuario');
+        return $this->belongsTo(User::class, 'idusuario', 'id');
+    }
+
+    // Alias genérico usado pelo MovimentacaoEstoqueController
+    public function item()
+    {
+        return $this->equipamento();
     }
 }

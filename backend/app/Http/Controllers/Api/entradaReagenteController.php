@@ -2,75 +2,31 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\entradaReagente;
-use Illuminate\Http\Request;
+use App\Models\entrada_reagente;
+use App\Models\reagente;
 
-class entradaReagenteController extends Controller
+/**
+ * Registra a chegada de um novo lote de reagente. Todas as unidades do lote
+ * compartilham a mesma validade. Quantidade sempre na unidade base (kg, L, un),
+ * aceitando frações decimais (ex.: 0.5 kg).
+ */
+class entradaReagenteController extends MovimentacaoEstoqueController
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-        $entradaReagentes = entradaReagente::all();
-        return response()->json($entradaReagentes, 200);
-    }
+    protected string $model = entrada_reagente::class;
+    protected string $itemModel = reagente::class;
+    protected string $itemChave = 'idreagente';
+    protected string $nome = 'Entrada de reagente';
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    protected function regras(): array
     {
-        //
-        $request->validate([
-            'reagente_id' => 'required|exists:reagentes,id',
-            'quantidade' => 'required|numeric|min:0',
-            'data_entrada' => 'required|date',
-        ]);
-        $entradaReagente = entradaReagente::create($request->all());
-        return response()->json($entradaReagente, 201);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-        $entradaReagente = entradaReagente::find($id);
-        if (!$entradaReagente) {
-            return response()->json(['message' => 'Entrada de reagente não encontrada'], 404);
-        }
-        return response()->json($entradaReagente, 200);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-        $entradaReagente = entradaReagente::find($id);
-        if (!$entradaReagente) {
-            return response()->json(['message' => 'Entrada de reagente não encontrada'], 404);
-        }
-        $entradaReagente->update($request->all());
-        return response()->json($entradaReagente, 200);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-        $entradaReagente = entradaReagente::find($id);
-        if (!$entradaReagente) {
-            return response()->json(['message' => 'Entrada de reagente não encontrada'], 404);
-        }
-        $entradaReagente->delete();
-        return response()->json(['message' => 'Entrada de reagente excluída com sucesso'], 200);
+        return [
+            'idreagente' => 'required|exists:reagentes,idreagente',
+            'idlaboratorio' => 'nullable|exists:laboratorios,idlaboratorio',
+            'quantidade' => 'required|numeric|gt:0|max:9999999',
+            'lote' => 'required|string|max:255',
+            'data_validade' => 'required|date',
+            'data' => 'nullable|date',
+            'observacao' => 'nullable|string|max:255',
+        ];
     }
 }

@@ -2,75 +2,29 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\saidaEquipamento;
-use Illuminate\Http\Request;
+use App\Models\equipamento;
+use App\Models\saida_equipamento;
 
-class saidaEquipamentoController extends Controller
+/**
+ * Registra a saída de um equipamento de um laboratório
+ * (transferência, envio para manutenção, baixa patrimonial).
+ */
+class saidaEquipamentoController extends MovimentacaoEstoqueController
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-        $saidaEquipamentos = saidaEquipamento::all();
-        return response()->json($saidaEquipamentos, 200);
-    }
+    protected string $model = saida_equipamento::class;
+    protected string $itemModel = equipamento::class;
+    protected string $itemChave = 'idequipamento';
+    protected bool $saida = true;
+    protected string $nome = 'Saída de equipamento';
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    protected function regras(): array
     {
-        //
-        $request->validate([
-            'equipamento_id' => 'required|exists:equipamentos,id',
-            'quantidade' => 'required|numeric|min:0',
-            'data_saida' => 'required|date',
-        ]);
-        $saidaEquipamento = saidaEquipamento::create($request->all());
-        return response()->json($saidaEquipamento, 201);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-        $saidaEquipamento = saidaEquipamento::find($id);
-        if (!$saidaEquipamento) {
-            return response()->json(['message' => 'Saída de equipamento não encontrada'], 404);
-        }
-        return response()->json($saidaEquipamento, 200);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-        $saidaEquipamento = saidaEquipamento::find($id);
-        if (!$saidaEquipamento) {
-            return response()->json(['message' => 'Saída de equipamento não encontrada'], 404);
-        }
-        $saidaEquipamento->update($request->all());
-        return response()->json($saidaEquipamento, 200);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-        $saidaEquipamento = saidaEquipamento::find($id);
-        if (!$saidaEquipamento) {
-            return response()->json(['message' => 'Saída de equipamento não encontrada'], 404);
-        }
-        $saidaEquipamento->delete();
-        return response()->json(['message' => 'Saída de equipamento excluída com sucesso'], 200);
+        return [
+            'idequipamento' => 'required|exists:equipamentos,idequipamento',
+            'idlaboratorio' => 'required|exists:laboratorios,idlaboratorio',
+            'quantidade' => 'required|integer|min:1',
+            'data' => 'nullable|date',
+            'observacao' => 'nullable|string|max:255',
+        ];
     }
 }

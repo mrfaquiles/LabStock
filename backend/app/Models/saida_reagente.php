@@ -25,11 +25,17 @@ class saida_reagente extends Model
 
     public function entrada()
     {
-        return $this->belongsTo(entrada_reagente::class, 'identrada', 'identrada');
+        return $this->belongsTo(entrada_reagente::class, 'identrada', 'identradareagente');
     }
 
     public function usuario()
     {
-        return $this->belongsTo(usuario::class, 'idusuario', 'idusuario');
+        return $this->belongsTo(User::class, 'idusuario', 'id');
+    }
+
+    // Alias genérico usado pelo MovimentacaoEstoqueController
+    public function item()
+    {
+        return $this->reagente();
     }
 }

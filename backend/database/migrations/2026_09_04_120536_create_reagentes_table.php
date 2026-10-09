@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('idreagente');
             $table->string('nome');
             $table->text('descricao')->nullable(); 
-            $table->unsignedBigInteger('idunidademedida')->constrained('unidade_medidas');
+            $table->unsignedBigInteger('idunidademedida');
             $table->decimal('quantidade', 10, 3)->default(0);
             $table->string('catmat', 50)->nullable();
             $table->tinyInteger('ativo')->default(1);

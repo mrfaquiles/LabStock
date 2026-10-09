@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('saida_equipamentos', function (Blueprint $table) {
             $table->id('idsaidaequipamento');
-            $table->unsignedBigInteger('idequipamento')->constrained('equipamentos');
-            $table->unsignedBigInteger('idlaboratorio')->constrained('laboratorios');
-            $table->unsignedBigInteger('idusuario')->constrained('usuarios');
+            $table->unsignedBigInteger('idequipamento');
+            $table->unsignedBigInteger('idlaboratorio');
+            $table->unsignedBigInteger('idusuario');
             $table->integer('quantidade');
             $table->date('data');
             $table->string('observacao')->nullable();

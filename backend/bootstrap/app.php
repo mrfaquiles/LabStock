@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,8 +14,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Deixa vazio por enquanto, não adiciona o CORS aqui para não gerar erro
+        $middleware->alias([
+            'perfil' => \App\Http\Middleware\VerificarPerfil::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // A API sempre responde em JSON (evita redirecionar para uma rota "login" inexistente)
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
+
+        // Chave estrangeira impedindo a exclusão: o registro tem histórico vinculado
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*') && $request->isMethod('delete') && $e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'Não é possível excluir: este registro possui movimentações vinculadas. '
+                        . 'Desative-o para preservar o histórico.',
+                ], 409);
+            }
+        });
     })->create();

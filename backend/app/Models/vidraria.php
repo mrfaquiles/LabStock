@@ -19,11 +19,11 @@ class vidraria extends Model
 
     public function entradas()
     {
-        return $this->hasMany(entrada_vidrarias::class, 'idvidraria', 'idvidraria');
+        return $this->hasMany(entrada_vidraria::class, 'idvidraria', 'idvidraria');
     }
 
     public function saidas()
     {
-        return $this->hasMany(saida_vidrarias::class, 'idvidraria', 'idvidraria');
+        return $this->hasMany(saida_vidraria::class, 'idvidraria', 'idvidraria');
     }
 }

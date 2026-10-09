@@ -24,11 +24,18 @@ class equipamentoController extends Controller
     public function store(Request $request)
     {
         //
-        $request->validate([
+        $dados = $request->validate([
             'nome' => 'required|string|max:255',
+            'catmat' => 'required|string|max:50',
+            'patrimonio' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:255',
+            'localizacao' => 'nullable|string|max:255',
+            'quantidade' => 'nullable|integer|min:0',
             'descricao' => 'nullable|string',
+            'ativo' => 'boolean',
         ]);
-        $equipamento = equipamento::create($request->all());
+        $dados['quantidade'] = $dados['quantidade'] ?? 1;
+        $equipamento = equipamento::create($dados);
         return response()->json($equipamento, 201);
     }
 
@@ -55,7 +62,17 @@ class equipamentoController extends Controller
         if (!$equipamento) {
             return response()->json(['message' => 'Equipamento não encontrado'], 404);
         }
-        $equipamento->update($request->all());
+        $dados = $request->validate([
+            'nome' => 'sometimes|required|string|max:255',
+            'catmat' => 'sometimes|required|string|max:50',
+            'patrimonio' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:255',
+            'localizacao' => 'nullable|string|max:255',
+            'quantidade' => 'sometimes|integer|min:0',
+            'descricao' => 'nullable|string',
+            'ativo' => 'boolean',
+        ]);
+        $equipamento->update($dados);
         return response()->json($equipamento, 200);
     }
 

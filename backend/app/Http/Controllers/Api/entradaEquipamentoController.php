@@ -2,75 +2,41 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\entradaEquipamento;
-use Illuminate\Http\Request;
+use App\Models\entrada_equipamento;
+use App\Models\equipamento;
+use App\Models\laboratorio;
+use Illuminate\Database\Eloquent\Model;
 
-class entradaEquipamentoController extends Controller
+/**
+ * Registra a chegada de um equipamento em um laboratório.
+ * A localização atual do equipamento passa a ser esse laboratório.
+ */
+class entradaEquipamentoController extends MovimentacaoEstoqueController
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    protected string $model = entrada_equipamento::class;
+    protected string $itemModel = equipamento::class;
+    protected string $itemChave = 'idequipamento';
+    protected bool $dataComHora = true;
+    protected string $nome = 'Entrada de equipamento';
+
+    protected function regras(): array
     {
-        //
-        $entradaEquipamentos = entradaEquipamento::all();
-        return response()->json($entradaEquipamentos, 200);
+        return [
+            'idequipamento' => 'required|exists:equipamentos,idequipamento',
+            'idlaboratorio' => 'required|exists:laboratorios,idlaboratorio',
+            'quantidade' => 'required|integer|min:1',
+            'data' => 'nullable|date',
+            'observacao' => 'nullable|string|max:255',
+        ];
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    protected function aposRegistrar(Model $movimentacao, Model $item): void
     {
-        //
-        $request->validate([
-            'equipamento_id' => 'required|exists:equipamentos,id',
-            'quantidade' => 'required|numeric|min:0',
-            'data_entrada' => 'required|date',
-        ]);
-        $entradaEquipamento = entradaEquipamento::create($request->all());
-        return response()->json($entradaEquipamento, 201);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-        $entradaEquipamento = entradaEquipamento::find($id);
-        if (!$entradaEquipamento) {
-            return response()->json(['message' => 'Entrada de equipamento não encontrada'], 404);
-        }
-        return response()->json($entradaEquipamento, 200);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-        $entradaEquipamento = entradaEquipamento::find($id);
-        if (!$entradaEquipamento) {
-            return response()->json(['message' => 'Entrada de equipamento não encontrada'], 404);
-        }
-        $entradaEquipamento->update($request->all());
-        return response()->json($entradaEquipamento, 200);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-        $entradaEquipamento = entradaEquipamento::find($id);
-        if (!$entradaEquipamento) {
-            return response()->json(['message' => 'Entrada de equipamento não encontrada'], 404);
-        }
-        $entradaEquipamento->delete();
-        return response()->json(['message' => 'Entrada de equipamento excluída com sucesso'], 200);
+        $laboratorio = laboratorio::find($movimentacao->idlaboratorio);
+        // A observação pode detalhar a bancada (ex.: "Bancada 03")
+        $item->localizacao = $movimentacao->observacao
+            ? "{$laboratorio->nome} - {$movimentacao->observacao}"
+            : $laboratorio->nome;
+        $item->save();
     }
 }

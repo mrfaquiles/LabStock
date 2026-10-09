@@ -11,7 +11,7 @@ class unidade_medida extends Model
     protected $primaryKey = 'idunidademedida';
     protected $fillable = [
         'nome',
-        'descricao',
+        'sigla',
     ];
 
 }
