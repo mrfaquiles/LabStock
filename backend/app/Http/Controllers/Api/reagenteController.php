@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuracao;
 use App\Models\entrada_reagente;
 use App\Models\reagente;
+use App\Rules\CodigoCas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Cadastro de reagentes com controle por lote.
@@ -22,16 +25,18 @@ class reagenteController extends Controller
      * Regras de validação. Na edição os campos são opcionais (sometimes),
      * mas se enviados continuam obrigatórios.
      */
-    private function regras(bool $edicao = false): array
+    private function regras(?int $id = null): array
     {
-        $obrigatorio = $edicao ? 'sometimes|required' : 'required';
+        $edicao = $id !== null;
+        $obrigatorio = $edicao ? ['sometimes', 'required'] : ['required'];
 
         $regras = [
-            'nome' => "$obrigatorio|string|max:255",
-            'catmat' => "$obrigatorio|string|max:50",
-            'idunidademedida' => "$obrigatorio|exists:unidade_medidas,idunidademedida",
-            'lote' => "$obrigatorio|string|max:255",
-            'data_validade' => "$obrigatorio|date",
+            'nome' => [...$obrigatorio, 'string', 'max:255', Rule::unique('reagentes', 'nome')->ignore($id, 'idreagente')],
+            'catmat' => [...$obrigatorio, 'string', 'max:50', Rule::unique('reagentes', 'catmat')->ignore($id, 'idreagente')],
+            'cas' => ['nullable', 'string', 'max:20', new CodigoCas],
+            'controlado' => 'boolean',
+            'classificacao_controle' => 'nullable|string|max:100',
+            'idunidademedida' => [...$obrigatorio, 'exists:unidade_medidas,idunidademedida'],
             'meses_alerta' => 'nullable|integer|min:1|max:36',
             'localizacao' => 'nullable|string|max:255',
             'descricao' => 'nullable|string',
@@ -39,13 +44,45 @@ class reagenteController extends Controller
             'ativo' => 'boolean',
         ];
 
-        // Quantidade só no cadastro (lote inicial); depois, apenas por movimentação.
-        // Sempre na unidade base (kg, L, un); frações em decimal (ex.: 0.5 kg)
+        // Só no cadastro: quantidade e dados do lote inicial. Depois, tudo muda por movimentação.
+        // Quantidade sempre na unidade base (kg, L, un); frações em decimal (ex.: 0.5 kg)
         if (!$edicao) {
-            $regras['quantidade'] = 'required|numeric|min:0|max:9999999';
+            $quantidade = request()->input('quantidade');
+            $temLoteInicial = !is_numeric($quantidade) || (float) $quantidade > 0;
+
+            $regras['quantidade'] = ['required', 'numeric', 'min:0', 'max:9999999', function ($campo, $valor, $falhar) {
+                // Abaixo de 1 mg / 1 µL o banco arredondaria para zero
+                if ((float) $valor > 0 && round((float) $valor, 6) <= 0) {
+                    $falhar('A quantidade mínima é de 1 mg ou 1 µL.');
+                }
+            }];
+            $regras['lote'] = [Rule::requiredIf($temLoteInicial), 'nullable', 'string', 'max:255'];
+            $regras['data_validade'] = [Rule::requiredIf($temLoteInicial), 'nullable', 'date'];
+            $regras['idlaboratorio'] = [Rule::requiredIf($temLoteInicial), 'nullable', 'exists:laboratorios,idlaboratorio'];
+            // Origem do lote inicial (nota fiscal, doação...): opcional
+            $regras['origem'] = 'nullable|string|max:255';
         }
 
         return $regras;
+    }
+
+    private function mensagens(): array
+    {
+        return [
+            'nome.unique' => 'Já existe um reagente com este nome.',
+            'catmat.unique' => 'Já existe um reagente com este CATMAT.',
+            'idlaboratorio.required' => 'Informe o laboratório do lote inicial.',
+        ];
+    }
+
+    /** Produto controlado precisa dizer em qual lista/código se enquadra. */
+    private function exigirClassificacao(bool $controlado, ?string $classificacao): void
+    {
+        if ($controlado && !trim((string) $classificacao)) {
+            throw ValidationException::withMessages([
+                'classificacao_controle' => 'Informe a lista / código do produto controlado.',
+            ]);
+        }
     }
 
     /**
@@ -56,7 +93,7 @@ class reagenteController extends Controller
         $lotes = $reagente->lotesComSaldo();
         $reagente->unsetRelation('entradas');
         $reagente->setAttribute('lotes', $lotes);
-        $reagente->setAttribute('proxima_validade', $lotes[0]['data_validade'] ?? $reagente->data_validade);
+        $reagente->setAttribute('proxima_validade', $lotes[0]['data_validade'] ?? null);
         return $reagente;
     }
 
@@ -81,7 +118,8 @@ class reagenteController extends Controller
      */
     public function store(Request $request)
     {
-        $dados = $request->validate($this->regras());
+        $dados = $request->validate($this->regras(), $this->mensagens());
+        $this->exigirClassificacao((bool) ($dados['controlado'] ?? false), $dados['classificacao_controle'] ?? null);
         $dados['meses_alerta'] = $dados['meses_alerta'] ?? Configuracao::valor('meses_alerta_padrao');
 
         $reagente = DB::transaction(function () use ($dados, $request) {
@@ -91,12 +129,13 @@ class reagenteController extends Controller
             if ((float) $dados['quantidade'] > 0) {
                 entrada_reagente::create([
                     'idreagente' => $reagente->idreagente,
+                    'idlaboratorio' => $dados['idlaboratorio'],
                     'idusuario' => $request->user()->id,
                     'quantidade' => $dados['quantidade'],
                     'lote' => $dados['lote'],
                     'data_validade' => $dados['data_validade'],
                     'data' => now()->toDateString(),
-                    'observacao' => 'Lote inicial (cadastro do reagente)',
+                    'observacao' => trim($dados['origem'] ?? '') ?: 'Lote inicial (cadastro do reagente)',
                 ]);
             }
 
@@ -129,25 +168,27 @@ class reagenteController extends Controller
             return response()->json(['message' => 'Reagente não encontrado'], 404);
         }
 
-        $dados = $request->validate($this->regras(true));
+        $dados = $request->validate($this->regras((int) $reagente->idreagente), $this->mensagens());
+        $this->exigirClassificacao(
+            (bool) ($dados['controlado'] ?? $reagente->controlado),
+            array_key_exists('classificacao_controle', $dados) ? $dados['classificacao_controle'] : $reagente->classificacao_controle
+        );
+
+        // O estoque está guardado nessa unidade: trocar kg por L mudaria o valor real sem converter nada
+        if (isset($dados['idunidademedida']) && (int) $dados['idunidademedida'] !== (int) $reagente->idunidademedida && $reagente->entradas()->exists()) {
+            return response()->json(['message' => 'A unidade não pode ser trocada: este reagente já tem lotes registrados nela.'], 422);
+        }
+
+        // Tirar um produto do controle esconderia o histórico da fiscalização: só o administrador pode
+        if ($reagente->controlado && array_key_exists('controlado', $dados) && !$dados['controlado'] && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Apenas o administrador pode remover um produto do controle.'], 403);
+        }
+
         if (array_key_exists('meses_alerta', $dados) && $dados['meses_alerta'] === null) {
             $dados['meses_alerta'] = Configuracao::valor('meses_alerta_padrao');
         }
 
-        DB::transaction(function () use ($reagente, $dados) {
-            // Correção do lote/validade do cadastro também corrige o lote inicial correspondente
-            $loteAntigo = $reagente->lote;
-            $validadeAntiga = $reagente->data_validade;
-
-            $reagente->update($dados);
-
-            if ($reagente->wasChanged(['lote', 'data_validade'])) {
-                entrada_reagente::where('idreagente', $reagente->idreagente)
-                    ->where('lote', $loteAntigo)
-                    ->where('data_validade', $validadeAntiga)
-                    ->update(['lote' => $reagente->lote, 'data_validade' => $reagente->data_validade]);
-            }
-        });
+        $reagente->update($dados);
 
         return response()->json($this->carregar($id), 200);
     }
@@ -157,11 +198,15 @@ class reagenteController extends Controller
      * Sem nenhum uso registrado (ex.: cadastro feito por engano), os lotes saem junto.
      * Com uso registrado, o histórico é preservado e a exclusão é recusada.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         $reagente = reagente::find($id);
         if (!$reagente) {
             return response()->json(['message' => 'Reagente não encontrado'], 404);
+        }
+
+        if ($reagente->controlado && !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Apenas o administrador pode excluir um produto controlado.'], 403);
         }
 
         if ($reagente->saidas()->exists()) {

@@ -30,7 +30,7 @@ class Configuracao extends Model
 
         // Compras: quanto tempo a licitação costuma levar até a entrega
         // e a folga aplicada na previsão de compras
-        'tempo_compra_meses' => ['padrao' => 6, 'tipo' => 'int'],
+        'tempo_compra_meses' => ['padrao' => 12, 'tipo' => 'int'],
         'margem_seguranca_percentual' => ['padrao' => 20, 'tipo' => 'int'],
 
         // Vidrarias: baixa precisa da aprovação do administrador

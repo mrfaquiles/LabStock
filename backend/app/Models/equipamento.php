@@ -18,7 +18,6 @@ class equipamento extends Model
         'descricao',
         'quantidade',
         'catmat',
-        'patrimonio',
         'status',
         'localizacao',
         'ativo'
@@ -40,6 +39,14 @@ class equipamento extends Model
     public function transferencias()
     {
         return $this->hasMany(transferencia_equipamento::class, 'idequipamento', 'idequipamento');
+    }
+
+    // Números de patrimônio das unidades que estão em estoque
+    public function patrimonios()
+    {
+        return $this->hasMany(equipamento_patrimonio::class, 'idequipamento', 'idequipamento')
+            ->whereNull('baixado_em')
+            ->orderBy('numero');
     }
 
     // Onde estão as unidades deste equipamento (só locais com quantidade)

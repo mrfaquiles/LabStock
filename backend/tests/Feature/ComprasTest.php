@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\entrada_reagente;
 use App\Models\User;
 use App\Models\vidraria;
 use Database\Seeders\UnidadeMedidaSeeder;
@@ -28,8 +29,11 @@ class ComprasTest extends TestCase
     {
         $r = $this->postJson('/api/reagentes', [
             'nome' => 'Percarbonato de Sódio', 'catmat' => '123', 'idunidademedida' => 1,
-            'quantidade' => 6 + $estoqueFinal, 'lote' => 'LOT-A', 'data_validade' => now()->addYears(2)->toDateString(),
+            'idlaboratorio' => $this->labId(), 'quantidade' => 6 + $estoqueFinal, 'lote' => 'LOT-A', 'data_validade' => now()->addYears(2)->toDateString(),
         ])->json();
+
+        // O lote chegou há um ano: o uso de 3 meses atrás não pode ser anterior à entrada
+        entrada_reagente::where('idreagente', $r['idreagente'])->update(['data' => now()->subYear()->toDateString()]);
 
         $this->postJson('/api/saidareagentes', [
             'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'],
@@ -88,7 +92,7 @@ class ComprasTest extends TestCase
     {
         $r = $this->reagenteComConsumo(2);
         $this->postJson('/api/entradareagentes', [
-            'idreagente' => $r['idreagente'], 'quantidade' => 10, 'lote' => 'VENCIDO',
+            'idreagente' => $r['idreagente'], 'idlaboratorio' => $this->labId(), 'quantidade' => 10, 'lote' => 'VENCIDO',
             'data_validade' => now()->subDay()->toDateString(),
         ])->assertCreated();
 
@@ -124,7 +128,7 @@ class ComprasTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors(['lote', 'data_validade']);
 
         $this->postJson("/api/pedidoscompra/{$id}/receber", [
-            'quantidade' => 5, 'lote' => 'LOT-NOVO', 'data_validade' => now()->addYears(3)->toDateString(),
+            'quantidade' => 5, 'idlaboratorio' => $this->labId(), 'lote' => 'LOT-NOVO', 'data_validade' => now()->addYears(3)->toDateString(),
         ])->assertOk()->assertJsonPath('status', 'recebido');
 
         $reagente = $this->getJson("/api/reagentes/{$r['idreagente']}")->json();
@@ -168,12 +172,12 @@ class ComprasTest extends TestCase
         $this->postJson('/api/pedidoscompra', ['idvidraria' => $bequer->idvidraria, 'quantidade' => 1])->assertForbidden();
     }
 
-    public function test_dashboard_avisa_itens_para_pedir_agora(): void
+    // Instituição pública só compra por licitação: o painel não mostra alerta de "pedir agora"
+    public function test_dashboard_nao_mostra_alerta_de_pedir_agora(): void
     {
         $this->reagenteComConsumo(2);
 
-        $this->getJson('/api/dashboard')
-            ->assertJsonPath('compras_pedir_agora', 1)
-            ->assertJsonPath('compras_pedir_agora_itens.0', 'Percarbonato de Sódio');
+        $this->getJson('/api/dashboard')->assertOk()
+            ->assertJsonMissingPath('compras_pedir_agora');
     }
 }

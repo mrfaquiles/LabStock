@@ -71,15 +71,22 @@
         <template v-slot:[`item.nome`]="{ item }">
           <div class="d-flex align-center">
             <span class="me-2">{{ item.nome }}</span>
-            <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-icon v-bind="props" size="small" color="grey-darken-1" class="cursor-pointer">mdi-help-circle-outline</v-icon>
-              </template>
-              <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-                <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">{{ item.descricao }}</p>
-              </v-card>
-            </v-menu>
+            <PopoverInfo v-if="item.descricao" titulo="Descrição" icone-titulo="mdi-text-box-outline">{{ item.descricao }}</PopoverInfo>
           </div>
+        </template>
+
+        <!-- Patrimônios: quantos números cadastrados para as unidades em estoque -->
+        <template v-slot:[`item.patrimonios`]="{ item }">
+          <PopoverInfo v-if="item.patrimonios?.length" titulo="Nºs de patrimônio" icone-titulo="mdi-barcode">
+            <template #activator="{ props }">
+              <v-chip v-bind="props" size="small" variant="tonal" :color="item.patrimonios.length < item.quantidade ? 'warning' : 'primary'" prepend-icon="mdi-barcode" class="cursor-pointer">
+                {{ item.patrimonios.length }} de {{ item.quantidade }}
+              </v-chip>
+            </template>
+            <div v-for="p in item.patrimonios" :key="p.idpatrimonio" class="popover-info__linha"><strong>{{ p.numero }}</strong><span class="text-medium-emphasis">{{ nomeLocal(p.laboratorio) }}</span></div>
+            <div v-if="item.patrimonios.length < item.quantidade" class="popover-info__secao text-warning">{{ item.quantidade - item.patrimonios.length }} unidade(s) sem número de patrimônio</div>
+          </PopoverInfo>
+          <span v-else class="text-caption text-grey">Sem patrimônio</span>
         </template>
 
         <!-- Status de Funcionamento -->
@@ -143,11 +150,8 @@
         <v-card-text>
           <v-form ref="formRef">
             <v-row>
-              <v-col cols="12" md="8">
+              <v-col cols="12">
                 <v-text-field v-model="form.nome" label="Nome do Equipamento *" variant="outlined" density="comfortable" placeholder="Ex.: Microscópio Óptico Binocular" :rules="[regras.obrigatorio]"></v-text-field>
-              </v-col>
-              <v-col cols="12" md="4">
-                <v-text-field v-model="form.patrimonio" label="Nº de Patrimônio" variant="outlined" density="comfortable" placeholder="Ex.: PAT-9921"></v-text-field>
               </v-col>
               <v-col cols="12" md="6">
                 <v-text-field v-model="form.catmat" label="Código CATMAT *" variant="outlined" density="comfortable" placeholder="Ex.: 123456" :rules="[regras.obrigatorio]"></v-text-field>
@@ -158,8 +162,39 @@
 
               <!-- Quantidade e local só no cadastro; depois, pela movimentação -->
               <template v-if="!form.idequipamento">
+                <v-col cols="12">
+                  <v-combobox
+                    v-model="form.patrimonios"
+                    label="Nºs de patrimônio (um por unidade)"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-barcode"
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    :delimiters="[',', ';', ' ']"
+                    placeholder="Digite o número e aperte Enter"
+                    hint="Cada patrimônio adicionado soma 1 unidade ao estoque. Deixe vazio se as unidades não têm patrimônio."
+                    persistent-hint
+                  ></v-combobox>
+                </v-col>
                 <v-col cols="12" md="4">
-                  <v-text-field v-model.number="form.quantidade" label="Quantidade *" type="number" min="1" step="1" variant="outlined" density="comfortable" :rules="[regras.inteiroPositivo]" @keydown="bloquearSinais"></v-text-field>
+                  <v-text-field
+                    :model-value="form.patrimonios?.length ? form.patrimonios.length : form.quantidade"
+                    @update:model-value="v => form.quantidade = Number(v)"
+                    label="Quantidade *"
+                    type="number"
+                    min="1"
+                    step="1"
+                    variant="outlined"
+                    density="comfortable"
+                    :disabled="!!form.patrimonios?.length"
+                    :hint="form.patrimonios?.length ? 'Igual ao número de patrimônios' : ''"
+                    persistent-hint
+                    :rules="[v => !!form.patrimonios?.length || regras.inteiroPositivo(v)]"
+                    @keydown="bloquearSinais"
+                  ></v-text-field>
                 </v-col>
                 <v-col cols="12" md="8">
                   <v-select
@@ -177,7 +212,7 @@
               </template>
               <v-col v-else cols="12">
                 <v-alert type="info" variant="tonal" density="compact">
-                  Quantidade: <strong>{{ form.quantidade }}</strong>. Para mudar de lugar, registrar entrada ou dar baixa, use
+                  Quantidade: <strong>{{ form.quantidade }}</strong> ({{ form.patrimonios?.length || 0 }} com patrimônio). Para mudar de lugar, registrar entrada (com novos patrimônios) ou dar baixa, use
                   <v-icon size="small">mdi-swap-horizontal-bold</v-icon> <strong>Movimentar</strong>. Assim o histórico fica completo.
                 </v-alert>
               </v-col>
@@ -207,7 +242,7 @@
           <span class="text-h6 font-weight-bold">Movimentar Equipamento</span>
           <v-btn icon variant="text" @click="dialogMov = false"><v-icon>mdi-close</v-icon></v-btn>
         </v-card-title>
-        <v-card-subtitle class="pb-2">{{ equipMov.nome }}{{ equipMov.patrimonio ? ` — patrimônio ${equipMov.patrimonio}` : '' }}</v-card-subtitle>
+        <v-card-subtitle class="pb-2">{{ equipMov.nome }} — {{ equipMov.quantidade }} un, {{ equipMov.patrimonios?.length || 0 }} com patrimônio</v-card-subtitle>
         <v-divider class="mb-4"></v-divider>
 
         <v-card-text>
@@ -252,9 +287,46 @@
                   :rules="[regras.obrigatorio]"
                 ></v-select>
               </v-col>
+              <v-col v-if="mov.tipo === 'entrada'" cols="12">
+                <v-combobox
+                  v-model="mov.patrimonios"
+                  label="Nºs de patrimônio das unidades novas"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-barcode"
+                  multiple
+                  chips
+                  closable-chips
+                  :delimiters="[',', ';', ' ']"
+                  placeholder="Digite o número e aperte Enter"
+                  hint="Cada patrimônio soma 1 unidade. Opcional."
+                  persistent-hint
+                ></v-combobox>
+              </v-col>
+              <!-- Transferência e baixa: quais unidades (patrimônios) saem da origem -->
+              <v-col v-if="mov.tipo !== 'entrada' && patrimoniosNaOrigem.length" cols="12">
+                <v-autocomplete
+                  v-model="mov.patrimoniosSaida"
+                  :items="patrimoniosNaOrigem"
+                  item-title="numero"
+                  item-value="idpatrimonio"
+                  :label="mov.tipo === 'transferir' ? 'Quais patrimônios estão sendo transferidos? *' : 'Quais patrimônios estão saindo? *'"
+                  variant="outlined"
+                  density="comfortable"
+                  prepend-inner-icon="mdi-barcode"
+                  multiple
+                  chips
+                  closable-chips
+                  no-data-text="Nenhum patrimônio neste local"
+                  :hint="dicaPatrimoniosOrigem"
+                  persistent-hint
+                  :rules="[regraPatrimoniosSaida]"
+                ></v-autocomplete>
+              </v-col>
               <v-col cols="12" md="4">
                 <v-text-field
                   v-model.number="mov.quantidade"
+                  :disabled="travaQuantidade"
                   label="Quantidade *"
                   type="number"
                   min="1"
@@ -297,7 +369,7 @@
         <v-card-title class="d-flex justify-space-between align-center pa-4">
           <div>
             <div class="text-h6 font-weight-bold">Histórico</div>
-            <div class="text-body-2 text-medium-emphasis">{{ equipHist.nome }}{{ equipHist.patrimonio ? ` — patrimônio ${equipHist.patrimonio}` : '' }}</div>
+            <div class="text-body-2 text-medium-emphasis">{{ equipHist.nome }}</div>
           </div>
           <v-btn icon variant="text" @click="dialogHist = false"><v-icon>mdi-close</v-icon></v-btn>
         </v-card-title>
@@ -354,6 +426,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import api, { mensagemErro } from '../plugins/axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import PopoverInfo from '../components/PopoverInfo.vue';
 import { baixarPdf } from '../utils/exportarRelatorio';
 import { useAuthStore } from '../stores/authStore';
 
@@ -374,7 +447,7 @@ const CAMPOS = {
 
 const headers = [
   { title: 'Nome do Equipamento', key: 'nome', align: 'start' },
-  { title: 'Nº Patrimônio', key: 'patrimonio' },
+  { title: 'Patrimônios', key: 'patrimonios', sortable: false },
   { title: 'CATMAT', key: 'catmat' },
   { title: 'Status', key: 'status' },
   { title: 'Qtd.', key: 'quantidade', align: 'center' },
@@ -460,7 +533,7 @@ const salvando = ref(false);
 const formRef = ref(null);
 const form = ref({});
 const formVazio = () => ({
-  idequipamento: null, nome: '', patrimonio: '', catmat: '', status: 'Operacional',
+  idequipamento: null, nome: '', patrimonios: [], catmat: '', status: 'Operacional',
   quantidade: 1, idlaboratorio: laboratorios.value.length === 1 ? laboratorios.value[0].idlaboratorio : null,
   localizacao: '', descricao: '',
 });
@@ -480,7 +553,7 @@ const salvar = async () => {
   const { valid } = await formRef.value.validate();
   if (!valid) return;
 
-  const campos = ['nome', 'patrimonio', 'catmat', 'status', 'localizacao', 'descricao'];
+  const campos = ['nome', 'catmat', 'status', 'localizacao', 'descricao'];
   const dados = Object.fromEntries(campos.map((c) => [c, form.value[c] || null]));
   dados.nome = form.value.nome;
   dados.catmat = form.value.catmat;
@@ -491,7 +564,13 @@ const salvar = async () => {
       await api.put(`/equipamentos/${form.value.idequipamento}`, dados);
       avisar('Equipamento atualizado. A alteração foi registrada no histórico.');
     } else {
-      await api.post('/equipamentos', { ...dados, quantidade: form.value.quantidade, idlaboratorio: form.value.idlaboratorio || null });
+      const patrimonios = (form.value.patrimonios || []).map((n) => String(n).trim()).filter(Boolean);
+      await api.post('/equipamentos', {
+        ...dados,
+        quantidade: patrimonios.length || form.value.quantidade,
+        idlaboratorio: form.value.idlaboratorio || null,
+        patrimonios,
+      });
       avisar('Equipamento cadastrado com sucesso.');
     }
     dialog.value = false;
@@ -533,6 +612,8 @@ const abrirMovimentacao = (item) => {
     destino: null,
     quantidade: 1,
     observacao: '',
+    patrimonios: [],
+    patrimoniosSaida: [],
   };
   dialogMov.value = true;
   nextTick(() => formMov.value?.resetValidation());
@@ -540,6 +621,24 @@ const abrirMovimentacao = (item) => {
 
 // Ao trocar o tipo, o destino escolhido pode não valer mais
 watch(() => mov.value.tipo, () => { if (mov.value) mov.value.destino = null; });
+
+// Com patrimônios informados, a quantidade é o número deles
+const patrimoniosDoTipo = computed(() => (mov.value.tipo === 'entrada' ? mov.value.patrimonios : mov.value.patrimoniosSaida) || []);
+const travaQuantidade = computed(() => patrimoniosDoTipo.value.length > 0);
+watch(patrimoniosDoTipo, (lista) => { if (lista.length) mov.value.quantidade = lista.length; });
+
+// Patrimônios que estão no local de origem (para transferir ou dar baixa)
+const patrimoniosNaOrigem = computed(() => (equipMov.value?.patrimonios || [])
+  .filter((p) => (p.idlaboratorio ?? null) === (mov.value.origem ?? null)));
+const unidadesSemNumeroNaOrigem = computed(() => Math.max(0, (maximoOrigem.value ?? 0) - patrimoniosNaOrigem.value.length));
+const dicaPatrimoniosOrigem = computed(() => (unidadesSemNumeroNaOrigem.value
+  ? `Cada patrimônio é 1 unidade. Há ${unidadesSemNumeroNaOrigem.value} unidade(s) sem patrimônio neste local.`
+  : 'Cada patrimônio escolhido é 1 unidade.'));
+// Só dá para mover sem escolher as unidades que não têm número
+const regraPatrimoniosSaida = (lista) => Number(mov.value.quantidade || 0) - (lista?.length || 0) <= unidadesSemNumeroNaOrigem.value
+  || 'Escolha quais patrimônios estão saindo deste local';
+// Trocou a origem ou o tipo: a escolha anterior não vale mais
+watch(() => [mov.value.origem, mov.value.tipo], () => { if (mov.value) mov.value.patrimoniosSaida = []; });
 
 const salvarMovimentacao = async () => {
   const { valid } = await formMov.value.validate();
@@ -550,13 +649,16 @@ const salvarMovimentacao = async () => {
   salvando.value = true;
   try {
     if (tipo === 'transferir') {
-      await api.post(`/equipamentos/${id}/transferir`, { idorigem: origem, iddestino: destino, quantidade, observacao: observacao || null });
+      await api.post(`/equipamentos/${id}/transferir`, {
+        idorigem: origem, iddestino: destino, quantidade, observacao: observacao || null, patrimonios: mov.value.patrimoniosSaida,
+      });
       avisar(`Transferido: ${quantidade} un para ${nomeLocal(laboratorios.value.find((l) => l.idlaboratorio === destino))}.`);
     } else if (tipo === 'entrada') {
-      await api.post('/entradaequipamentos', { idequipamento: id, idlaboratorio: destino, quantidade, observacao: observacao || null });
+      const patrimonios = (mov.value.patrimonios || []).map((n) => String(n).trim()).filter(Boolean);
+      await api.post('/entradaequipamentos', { idequipamento: id, idlaboratorio: destino, quantidade, observacao: observacao || null, patrimonios });
       avisar(`Entrada registrada: +${quantidade} un.`);
     } else {
-      await api.post('/saidaequipamentos', { idequipamento: id, idlaboratorio: origem, quantidade, observacao });
+      await api.post('/saidaequipamentos', { idequipamento: id, idlaboratorio: origem, quantidade, observacao, patrimonios_baixa: mov.value.patrimoniosSaida });
       avisar(`Baixa registrada: −${quantidade} un.`);
     }
     dialogMov.value = false;
@@ -619,9 +721,9 @@ const emitirRelatorio = () => {
     subtitulo: `Posição em ${new Date().toLocaleDateString('pt-BR')}${unidadeFiltrada ? `   |   ${unidadeFiltrada.nome}` : ''}`,
     nomeArquivo: `labstock-equipamentos-${new Date().toISOString().slice(0, 10)}`,
     tabelas: [{
-      colunas: ['Nome do Equipamento', 'Nº Patrimônio', 'CATMAT', 'Status', 'Qtd.', 'Onde está'],
+      colunas: ['Nome do Equipamento', 'Patrimônios', 'CATMAT', 'Status', 'Qtd.', 'Onde está'],
       linhas: equipamentosFiltrados.value.map((e) => [
-        e.nome, e.patrimonio || '-', e.catmat || '-', e.status || '-', quantidadeExibida(e),
+        e.nome, (e.patrimonios || []).map((p) => p.numero).join(', ') || '-', e.catmat || '-', e.status || '-', quantidadeExibida(e),
         locaisNaUnidade(e).map((l) => `${nomeLocal(l.laboratorio)}: ${l.quantidade}`).join('\n') || '-',
       ]),
     }],

@@ -26,7 +26,7 @@ class RelatorioTest extends TestCase
         // Lote inicial de 10 kg registrado em 01/03/2026
         $this->reagente = $this->postJson('/api/reagentes', [
             'nome' => 'Percarbonato de Sódio', 'catmat' => '123', 'idunidademedida' => 1,
-            'quantidade' => 10, 'lote' => 'LOT-A', 'data_validade' => '2030-01-01',
+            'idlaboratorio' => $this->labId(), 'quantidade' => 10, 'lote' => 'LOT-A', 'data_validade' => '2030-01-01',
         ])->json();
         $this->lote = $this->reagente['lotes'][0]['identradareagente'];
         \App\Models\entrada_reagente::find($this->lote)->update(['data' => '2026-03-01']);

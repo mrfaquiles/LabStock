@@ -200,14 +200,7 @@
             <template v-slot:[`item.nome`]="{ item }">
               <div class="d-flex align-center">
                 <span class="me-2">{{ item.nome }}</span>
-                <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
-                  <template v-slot:activator="{ props }">
-                    <v-icon v-bind="props" size="small" color="grey-darken-1" class="cursor-pointer">mdi-help-circle-outline</v-icon>
-                  </template>
-                  <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-                    <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">{{ item.descricao }}</p>
-                  </v-card>
-                </v-menu>
+                <PopoverInfo v-if="item.descricao" titulo="Descrição" icone-titulo="mdi-text-box-outline">{{ item.descricao }}</PopoverInfo>
               </div>
             </template>
             <template v-slot:[`item.unidade`]="{ item }">
@@ -302,6 +295,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue';
 import api, { mensagemErro } from '../plugins/axios';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import PopoverInfo from '../components/PopoverInfo.vue';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import { useConfigStore } from '../stores/configStore';
 

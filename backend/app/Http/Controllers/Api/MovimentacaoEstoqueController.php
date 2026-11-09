@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Cada movimentação fica registrada como histórico e ajusta a quantidade do item
  * na mesma transação. O usuário responsável é sempre o autenticado.
- * Na edição só a observação pode mudar; quantidades e datas ficam preservadas.
+ * Na edição só a observação pode mudar (no lote de reagente, também o número e a validade);
+ * quantidades e datas ficam preservadas.
  */
 abstract class MovimentacaoEstoqueController extends Controller
 {
@@ -37,6 +38,18 @@ abstract class MovimentacaoEstoqueController extends Controller
     protected array $relacoes = ['usuario:id,nome,email', 'laboratorio'];
 
     abstract protected function regras(): array;
+
+    /** O que pode ser corrigido depois de registrado. */
+    protected function regrasEdicao(): array
+    {
+        return ['observacao' => 'nullable|string|max:255'];
+    }
+
+    /** Mensagens próprias de validação. */
+    protected function mensagens(): array
+    {
+        return [];
+    }
 
     /** Validações extras de negócio. Retorna a mensagem de erro ou null. */
     protected function validarNegocio(array $dados, Model $item): ?string
@@ -70,6 +83,12 @@ abstract class MovimentacaoEstoqueController extends Controller
         return null;
     }
 
+    /** Validação ao editar a observação. Retorna a mensagem de erro ou null. */
+    protected function aoEditar(Model $movimentacao): ?string
+    {
+        return null;
+    }
+
     /**
      * Lista o histórico, do mais recente para o mais antigo.
      * Filtro opcional pelo item: ?idvidraria=3
@@ -89,7 +108,14 @@ abstract class MovimentacaoEstoqueController extends Controller
 
     public function store(Request $request)
     {
-        $dados = $request->validate($this->regras());
+        $regras = $this->regras();
+        // Movimentação não pode ser lançada com data futura
+        if (isset($regras['data'])) {
+            $regras['data'] .= '|before_or_equal:now';
+        }
+        $dados = $request->validate($regras, array_merge([
+            'data.before_or_equal' => 'A data da movimentação não pode ser futura.',
+        ], $this->mensagens()));
 
         return DB::transaction(function () use ($request, $dados) {
             // Trava o item para evitar duas baixas simultâneas do mesmo estoque
@@ -137,9 +163,15 @@ abstract class MovimentacaoEstoqueController extends Controller
             return response()->json(['message' => "{$this->nome} não encontrada"], 404);
         }
 
-        $dados = $request->validate([
-            'observacao' => 'nullable|string|max:255',
-        ]);
+        if (!$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Apenas o administrador pode alterar uma movimentação registrada.'], 403);
+        }
+
+        if ($erro = $this->aoEditar($movimentacao)) {
+            return response()->json(['message' => $erro], 422);
+        }
+
+        $dados = $request->validate($this->regrasEdicao(), $this->mensagens());
 
         $movimentacao->update($dados);
         return response()->json($movimentacao->load(array_merge($this->relacoes, ['item'])), 200);
@@ -147,12 +179,18 @@ abstract class MovimentacaoEstoqueController extends Controller
 
     /**
      * Estorna a movimentação (para corrigir lançamentos errados), devolvendo o estoque.
+     * Só o administrador pode estornar; o registro apagado fica em historico_alteracoes,
+     * com quem estornou e quando.
      */
-    public function destroy(string $id)
+    public function destroy(Request $request, string $id)
     {
         $movimentacao = $this->model::find($id);
         if (!$movimentacao) {
             return response()->json(['message' => "{$this->nome} não encontrada"], 404);
+        }
+
+        if (!$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Apenas o administrador pode estornar uma movimentação.'], 403);
         }
 
         return DB::transaction(function () use ($movimentacao) {

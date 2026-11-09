@@ -8,7 +8,7 @@ const PADROES = {
   responsavel_tecnico: '',
   meses_alerta_padrao: 4,
   cobertura_minima_meses: 3,
-  tempo_compra_meses: 6,
+  tempo_compra_meses: 12,
   margem_seguranca_percentual: 20,
   vidraria_exige_aprovacao: true,
   sessao_horas: 8,

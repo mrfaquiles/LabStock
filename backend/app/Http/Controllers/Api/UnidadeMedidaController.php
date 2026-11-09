@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\reagente;
 use App\Models\unidade_medida;
 use Illuminate\Http\Request;
 
@@ -55,6 +56,13 @@ class UnidadeMedidaController extends Controller
             'nome' => 'sometimes|required|string|max:255',
             'sigla' => 'sometimes|required|string|max:3',
         ]);
+
+        // O estoque dos reagentes está guardado nesta unidade: mudar a sigla mudaria o valor real
+        if (isset($dados['sigla']) && $dados['sigla'] !== $unidadeMedida->sigla
+            && reagente::where('idunidademedida', $unidadeMedida->idunidademedida)->exists()) {
+            return response()->json(['message' => 'A sigla não pode ser trocada: há reagentes usando esta unidade.'], 422);
+        }
+
         $unidadeMedida->update($dados);
         return response()->json($unidadeMedida, 200);
     }

@@ -18,7 +18,7 @@ class entradaVidrariaController extends MovimentacaoEstoqueController
         return [
             'idvidraria' => 'required|exists:vidrarias,idvidraria',
             'idlaboratorio' => 'required|exists:laboratorios,idlaboratorio',
-            'quantidade' => 'required|integer|min:1',
+            'quantidade' => 'required|integer|min:1|max:100000',
             'data' => 'nullable|date',
             'observacao' => 'nullable|string|max:255',
         ];

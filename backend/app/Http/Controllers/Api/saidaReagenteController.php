@@ -27,10 +27,17 @@ class saidaReagenteController extends MovimentacaoEstoqueController
         return [
             'idreagente' => 'required|exists:reagentes,idreagente',
             'identrada' => 'required|exists:entrada_reagentes,identradareagente',
-            'quantidade' => 'required|numeric|gt:0',
+            'quantidade' => 'required|numeric|min:0.000001',
             'data' => 'nullable|date',
             'observacao' => 'nullable|string|max:255',
+            // Quem usa um lote vencido precisa confirmar que está ciente
+            'confirmar_vencido' => 'boolean',
         ];
+    }
+
+    protected function mensagens(): array
+    {
+        return ['quantidade.min' => 'A quantidade mínima é de 1 mg ou 1 µL.'];
     }
 
     protected function textoQuantidade(float $valor, Model $item): string
@@ -40,11 +47,30 @@ class saidaReagenteController extends MovimentacaoEstoqueController
 
     protected function validarNegocio(array $dados, Model $item): ?string
     {
+        if ($item->controlado && mb_strlen(trim($dados['observacao'] ?? '')) < 10) {
+            return 'Produto controlado: descreva a justificativa de uso com pelo menos 10 caracteres.';
+        }
+
         // Trava o lote junto com o reagente para o saldo não ser consumido duas vezes
         $entrada = entrada_reagente::lockForUpdate()->find($dados['identrada']);
 
         if ((int) $entrada->idreagente !== (int) $item->idreagente) {
             return 'O lote informado não pertence a este reagente.';
+        }
+
+        // O uso não pode ser anterior à chegada do lote
+        $dataUso = substr((string) ($dados['data'] ?? now()->toDateString()), 0, 10);
+        $dataEntrada = substr((string) $entrada->data, 0, 10);
+        if ($dataUso < $dataEntrada) {
+            return 'A data do uso não pode ser anterior à entrada do lote ' . $entrada->lote
+                . ' (' . date('d/m/Y', strtotime($dataEntrada)) . ').';
+        }
+
+        // Lote vencido: permitido, mas só com confirmação explícita
+        $validade = substr((string) $entrada->data_validade, 0, 10);
+        if ($validade && $validade < $dataUso && empty($dados['confirmar_vencido'])) {
+            return 'O lote ' . $entrada->lote . ' está vencido desde ' . date('d/m/Y', strtotime($validade))
+                . '. Confirme que deseja utilizá-lo mesmo assim.';
         }
 
         $saldo = $entrada->saldo();
@@ -54,5 +80,20 @@ class saidaReagenteController extends MovimentacaoEstoqueController
         }
 
         return null;
+    }
+
+    // O registro de uso de produto controlado é a prova em uma fiscalização: não muda depois de gravado
+    protected function aoEstornar(Model $movimentacao): ?string
+    {
+        return $movimentacao->reagente?->controlado
+            ? 'Registros de produto controlado não podem ser apagados. Para corrigir um erro, registre uma nova entrada explicando a correção.'
+            : null;
+    }
+
+    protected function aoEditar(Model $movimentacao): ?string
+    {
+        return $movimentacao->reagente?->controlado
+            ? 'A justificativa de produto controlado não pode ser alterada depois de registrada.'
+            : null;
     }
 }

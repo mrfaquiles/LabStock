@@ -2,13 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
-import Reagentes from '../views/Reagentes.vue'
-import Vidrarias from '../views/Vidrarias.vue'
-import Equipamentos from '../views/Equipamentos.vue'
-import Usuarios from '../views/Usuarios.vue'
-import Relatorios from '../views/Relatorios.vue'
-import Configuracoes from '../views/Configuracoes.vue'
-import Compras from '../views/Compras.vue'
+
+// As demais telas só são baixadas quando abertas (primeiro acesso mais leve)
+const Reagentes = () => import('../views/Reagentes.vue')
+const Vidrarias = () => import('../views/Vidrarias.vue')
+const Equipamentos = () => import('../views/Equipamentos.vue')
+const Usuarios = () => import('../views/Usuarios.vue')
+const Relatorios = () => import('../views/Relatorios.vue')
+const Configuracoes = () => import('../views/Configuracoes.vue')
+const Compras = () => import('../views/Compras.vue')
+const ProdutosControlados = () => import('../views/ProdutosControlados.vue')
 
 const routes = [
   { path: '/login', name: 'Login', component: Login, meta: { publica: true } },
@@ -18,6 +21,7 @@ const routes = [
   { path: '/equipamentos', name: 'Equipamentos', component: Equipamentos },
   { path: '/compras', name: 'Compras', component: Compras },
   { path: '/relatorios', name: 'Relatorios', component: Relatorios },
+  { path: '/produtos-controlados', name: 'ProdutosControlados', component: ProdutosControlados },
   { path: '/configuracoes', name: 'Configuracoes', component: Configuracoes, meta: { perfis: ['admin'] } },
   { path: '/usuarios', name: 'Usuarios', component: Usuarios, meta: { perfis: ['admin'] } },
   { path: '/:pathMatch(.*)*', redirect: '/' }

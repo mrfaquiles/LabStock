@@ -25,6 +25,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // A API sempre responde em JSON (evita redirecionar para uma rota "login" inexistente)
         $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*') || $request->expectsJson());
 
+        // Número maior do que a coluna do banco aceita: mensagem clara, sem expor detalhes do banco
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if ($request->is('api/*') && $e->getCode() === '22003') {
+                return response()->json(['message' => 'O valor informado é maior do que o permitido.'], 422);
+            }
+        });
+
         // Chave estrangeira impedindo a exclusão: o registro tem histórico vinculado
         $exceptions->render(function (QueryException $e, Request $request) {
             if ($request->is('api/*') && $request->isMethod('delete') && $e->getCode() === '23000') {

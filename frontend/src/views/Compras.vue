@@ -97,15 +97,7 @@
             <template v-slot:[`item.nome`]="{ item }">
               <div class="d-flex align-center">
                 <span class="me-2">{{ item.nome }}</span>
-                <v-menu open-on-hover location="top" :close-on-content-click="false">
-                  <template v-slot:activator="{ props }">
-                    <v-icon v-bind="props" size="small" color="grey-darken-1" class="cursor-pointer">mdi-help-circle-outline</v-icon>
-                  </template>
-                  <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 380px; max-height: 220px; overflow-y: auto; border: 1px solid #b0bec5;">
-                    <p class="text-caption font-weight-bold text-blue-grey-darken-4 mb-1">Justificativa</p>
-                    <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">{{ item.justificativa }}</p>
-                  </v-card>
-                </v-menu>
+                <PopoverInfo titulo="Justificativa" icone-titulo="mdi-calculator-variant-outline">{{ item.justificativa }}</PopoverInfo>
               </div>
             </template>
 
@@ -331,6 +323,18 @@
               @keydown="bloquearSinais"
             ></v-text-field>
             <template v-if="pedidoReceber.categoria === 'reagentes'">
+              <v-select
+                v-model="recebimento.idlaboratorio"
+                :items="laboratorios"
+                item-title="titulo"
+                item-value="idlaboratorio"
+                label="Laboratório do lote *"
+                variant="outlined"
+                density="comfortable"
+                class="mt-2"
+                no-data-text="Nenhum laboratório cadastrado (o administrador cadastra em Configurações)"
+                :rules="[regras.obrigatorio]"
+              ></v-select>
               <v-row dense class="mt-2">
                 <v-col cols="12" sm="6">
                   <v-text-field v-model="recebimento.lote" label="Número do lote *" variant="outlined" density="comfortable" autocomplete="off" :rules="[regras.obrigatorio]"></v-text-field>
@@ -361,6 +365,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue';
 import api, { mensagemErro } from '../plugins/axios';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import PopoverInfo from '../components/PopoverInfo.vue';
 import { useAuthStore } from '../stores/authStore';
 import { useConfigStore } from '../stores/configStore';
 import { baixarPdf, baixarCsv } from '../utils/exportarRelatorio';
@@ -622,9 +627,24 @@ const dialogReceber = ref(false);
 const formReceber = ref(null);
 const pedidoReceber = ref(null);
 const recebimento = ref({});
+const laboratorios = ref([]);
+const carregarLaboratorios = async () => {
+  try {
+    const { data } = await api.get('/laboratorios');
+    laboratorios.value = data.map((l) => ({
+      idlaboratorio: l.idlaboratorio,
+      titulo: l.unidade?.nome ? `${l.unidade.nome} › ${l.nome}` : l.nome,
+    }));
+  } catch (err) {
+    avisar(mensagemErro(err, 'Erro ao carregar laboratórios.'), 'error');
+  }
+};
 const abrirRecebimento = (pedido) => {
   pedidoReceber.value = pedido;
-  recebimento.value = { quantidade: Number(pedido.quantidade), lote: '', data_validade: '' };
+  recebimento.value = {
+    quantidade: Number(pedido.quantidade), lote: '', data_validade: '',
+    idlaboratorio: laboratorios.value.length === 1 ? laboratorios.value[0].idlaboratorio : null,
+  };
   dialogReceber.value = true;
   nextTick(() => formReceber.value?.resetValidation());
 };
@@ -649,6 +669,7 @@ const confirmarRecebimento = async () => {
 onMounted(async () => {
   carregarPedidos();
   carregarItens();
+  carregarLaboratorios();
   // Usa a margem configurada pelo admin assim que as configurações chegarem
   if (!config.carregado) await config.carregar();
   filtros.value.margem = config.config.margem_seguranca_percentual;

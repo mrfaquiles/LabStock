@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RegistraHistorico;
 use Illuminate\Database\Eloquent\Model;
 
 class vidraria extends Model
 {
-    //
+    use RegistraHistorico;
+
+    // O estoque muda por entrada e baixa, que já são registros próprios
+    protected array $historicoIgnorar = ['quantidade'];
+
     protected $table = 'vidrarias';
     protected $primaryKey = 'idvidraria';
     protected $fillable = [

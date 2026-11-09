@@ -11,12 +11,16 @@ use Illuminate\Database\Eloquent\Model;
  *
  * Uso: `use RegistraHistorico;` no model.
  * Campos ignorados podem ser definidos em `protected array $historicoIgnorar`.
+ * Para registrar só algumas ações: `protected array $historicoAcoes = ['alterado', 'excluido'];`
  */
 trait RegistraHistorico
 {
     public static function bootRegistraHistorico(): void
     {
         static::created(function (Model $model) {
+            if (!$model->registraAcao('criado')) {
+                return;
+            }
             $model->gravarHistorico('criado', collect($model->getAttributes())
                 ->except($model->camposIgnoradosHistorico())
                 ->map(fn ($valor) => ['antes' => null, 'depois' => $valor])
@@ -24,6 +28,9 @@ trait RegistraHistorico
         });
 
         static::updated(function (Model $model) {
+            if (!$model->registraAcao('alterado')) {
+                return;
+            }
             $alteracoes = [];
             foreach ($model->getChanges() as $campo => $novo) {
                 if (in_array($campo, $model->camposIgnoradosHistorico(), true)) {
@@ -41,9 +48,21 @@ trait RegistraHistorico
             }
         });
 
+        // Guarda o que foi apagado, para o registro não sumir sem deixar rastro
         static::deleted(function (Model $model) {
-            $model->gravarHistorico('excluido', null);
+            if (!$model->registraAcao('excluido')) {
+                return;
+            }
+            $model->gravarHistorico('excluido', collect($model->getAttributes())
+                ->except($model->camposIgnoradosHistorico())
+                ->map(fn ($valor) => ['antes' => $valor, 'depois' => null])
+                ->all());
         });
+    }
+
+    protected function registraAcao(string $acao): bool
+    {
+        return in_array($acao, $this->historicoAcoes ?? ['criado', 'alterado', 'excluido'], true);
     }
 
     protected function camposIgnoradosHistorico(): array

@@ -133,6 +133,85 @@ class RelatorioController extends Controller
     }
 
     /**
+     * GET /relatorios/controlados — prestação de contas dos produtos controlados:
+     * saldo do período e cada entrada e uso, com lote, usuário, data e justificativa.
+     * Filtro opcional: ?idreagente=3
+     */
+    public function controlados(Request $request)
+    {
+        [$inicio, $fim] = $this->filtros($request);
+        $request->validate(['idreagente' => 'nullable|exists:reagentes,idreagente']);
+
+        $reagentes = reagente::with('unidadeMedida')
+            ->where('controlado', true)
+            ->when($request->filled('idreagente'), fn ($q) => $q->where('idreagente', $request->input('idreagente')))
+            ->orderBy('nome')
+            ->get()
+            ->keyBy('idreagente');
+        $ids = $reagentes->keys();
+
+        $linha = fn ($mov, string $tipo, ?string $lote, $validade) => [
+            'tipo' => $tipo,
+            'data' => substr((string) $mov->data, 0, 10),
+            'registrado_em' => $mov->created_at?->toDateTimeString(),
+            'idreagente' => $mov->idreagente,
+            'reagente' => $reagentes[$mov->idreagente]->nome,
+            'lote' => $lote,
+            'data_validade' => $validade,
+            'quantidade' => (float) $mov->quantidade,
+            'unidade' => $reagentes[$mov->idreagente]->unidadeMedida?->sigla,
+            'usuario' => $mov->usuario?->nome,
+            'justificativa' => $mov->observacao,
+        ];
+
+        $entradas = entrada_reagente::with('usuario:id,nome')
+            ->whereIn('idreagente', $ids)->whereBetween('data', [$inicio, $fim])->get()
+            ->map(fn ($e) => $linha($e, 'entrada', $e->lote, $e->data_validade));
+
+        $usos = saida_reagente::with(['usuario:id,nome', 'entrada'])
+            ->whereIn('idreagente', $ids)->whereBetween('data', [$inicio, $fim])->get()
+            ->map(fn ($s) => $linha($s, 'uso', $s->entrada?->lote, $s->entrada?->data_validade));
+
+        // Mesmo cálculo do relatório de estoque: parte do saldo atual e desfaz o que veio depois do período
+        $entradasPeriodo = $this->somaPorItem(entrada_reagente::class, 'idreagente', $inicio, $fim);
+        $saidasPeriodo = $this->somaPorItem(saida_reagente::class, 'idreagente', $inicio, $fim);
+        $entradasAteFim = $this->somaPorItem(entrada_reagente::class, 'idreagente', null, $fim);
+        $saidasAteFim = $this->somaPorItem(saida_reagente::class, 'idreagente', null, $fim);
+        $entradasTotal = $this->somaPorItem(entrada_reagente::class, 'idreagente');
+        $saidasTotal = $this->somaPorItem(saida_reagente::class, 'idreagente');
+
+        $resumo = $reagentes->values()->map(function ($r) use ($entradasPeriodo, $saidasPeriodo, $entradasAteFim, $saidasAteFim, $entradasTotal, $saidasTotal, $usos) {
+            $id = $r->idreagente;
+            $saldoFinal = (float) $r->quantidade
+                - (($entradasTotal[$id] ?? 0) - ($entradasAteFim[$id] ?? 0))
+                + (($saidasTotal[$id] ?? 0) - ($saidasAteFim[$id] ?? 0));
+            $entrou = $entradasPeriodo[$id] ?? 0;
+            $saiu = $saidasPeriodo[$id] ?? 0;
+
+            return [
+                'idreagente' => $id,
+                'nome' => $r->nome,
+                'catmat' => $r->catmat,
+                'cas' => $r->cas,
+                'classificacao_controle' => $r->classificacao_controle,
+                'unidade' => $r->unidadeMedida?->sigla,
+                'saldo_inicial' => round($saldoFinal - $entrou + $saiu, 6),
+                'entradas' => round($entrou, 6),
+                'usos' => round($saiu, 6),
+                'saldo_final' => round($saldoFinal, 6),
+                // Usos antigos, de antes de o produto ser marcado como controlado
+                'usos_sem_justificativa' => $usos->where('idreagente', $id)->filter(fn ($u) => !trim((string) $u['justificativa']))->count(),
+            ];
+        });
+
+        return response()->json([
+            'periodo' => ['inicio' => $inicio, 'fim' => substr($fim, 0, 10)],
+            'resumo' => $resumo,
+            'movimentacoes' => $entradas->concat($usos)->sortBy(['data', 'registrado_em'])->values(),
+        ], 200);
+    }
+
+    /**
      * GET /relatorios/gastos — consumo de reagentes, quebras/perdas de vidrarias
      * e saídas de equipamentos no período.
      */

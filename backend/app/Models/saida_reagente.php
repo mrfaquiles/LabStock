@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RegistraHistorico;
 use Illuminate\Database\Eloquent\Model;
 
 class saida_reagente extends Model
 {
-    //
+    use RegistraHistorico;
+
+    // A movimentação já é o próprio registro; o histórico guarda edições e estornos
+    protected array $historicoAcoes = ['alterado', 'excluido'];
+
     protected $table = 'saida_reagentes';
     protected $primaryKey = 'idsaidareagente';
     protected $fillable = [

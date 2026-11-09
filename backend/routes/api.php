@@ -22,28 +22,33 @@ use App\Http\Controllers\Api\unidadeController;
 
 // Recursos de estoque: leitura liberada a todos os perfis, escrita apenas para admin/técnico
 $recursosEstoque = [
-    'unidademedidas' => UnidadeMedidaController::class,
     'entradavidrarias' => entradaVidrariaController::class,
     'entradareagentes' => entradaReagenteController::class,
     'saidareagentes' => saidaReagenteController::class,
     'entradaequipamentos' => entradaEquipamentoController::class,
     'saidaequipamentos' => saidaEquipamentoController::class,
-    'laboratorios' => laboratorioController::class,
-    'unidades' => unidadeController::class,
     'vidrarias' => vidrariaController::class,
     'reagentes' => reagenteController::class,
     'equipamentos' => equipamentoController::class,
 ];
 
+// Cadastros de apoio (tela de Configurações): leitura para todos, escrita só para o admin
+$recursosApoio = [
+    'unidademedidas' => UnidadeMedidaController::class,
+    'laboratorios' => laboratorioController::class,
+    'unidades' => unidadeController::class,
+];
+
 // Rota pública
 Route::post('login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->group(function () use ($recursosEstoque) {
+Route::middleware('auth:sanctum')->group(function () use ($recursosEstoque, $recursosApoio) {
     Route::get('me', [AuthController::class, 'me']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::get('dashboard', [DashboardController::class, 'index']);
     Route::get('relatorios/estoque', [RelatorioController::class, 'estoque']);
     Route::get('relatorios/gastos', [RelatorioController::class, 'gastos']);
+    Route::get('relatorios/controlados', [RelatorioController::class, 'controlados']);
     Route::get('configuracoes', [ConfiguracaoController::class, 'index']);
 
     // Compras: previsão para a licitação e acompanhamento dos pedidos
@@ -55,7 +60,7 @@ Route::middleware('auth:sanctum')->group(function () use ($recursosEstoque) {
     });
 
     // Todos os perfis (admin, tecnico, consulta)
-    foreach ($recursosEstoque as $recurso => $controller) {
+    foreach ($recursosEstoque + $recursosApoio as $recurso => $controller) {
         Route::apiResource($recurso, $controller)->only(['index', 'show']);
     }
     Route::get('equipamentos/{id}/historico', [equipamentoController::class, 'historico']);
@@ -72,7 +77,10 @@ Route::middleware('auth:sanctum')->group(function () use ($recursosEstoque) {
     Route::apiResource('saidavidrarias', saidaVidrariaController::class)->except(['update']);
 
     // Gestão de usuários e aprovação de baixas de vidraria
-    Route::middleware('perfil:admin')->group(function () {
+    Route::middleware('perfil:admin')->group(function () use ($recursosApoio) {
+        foreach ($recursosApoio as $recurso => $controller) {
+            Route::apiResource($recurso, $controller)->except(['index', 'show']);
+        }
         Route::apiResource('usuarios', UsuarioController::class);
         Route::put('configuracoes', [ConfiguracaoController::class, 'update']);
         Route::post('saidavidrarias/{id}/aprovar', [saidaVidrariaController::class, 'aprovar']);

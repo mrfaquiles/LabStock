@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class UsuarioController extends Controller
 {
@@ -67,11 +68,18 @@ class UsuarioController extends Controller
             }
         }
 
+        $trocouSenha = !empty($validated['password']);
         $usuario->update($validated);
 
         // Usuário desativado perde as sessões abertas
         if (!$usuario->ativo) {
             $usuario->tokens()->delete();
+        } elseif ($trocouSenha) {
+            // Senha nova derruba os logins antigos (menos o de quem está trocando a própria senha agora)
+            $atual = $request->user()->currentAccessToken();
+            $usuario->tokens()
+                ->when($atual instanceof PersonalAccessToken, fn ($q) => $q->where('id', '<>', $atual->id))
+                ->delete();
         }
 
         return response()->json($usuario, 200);

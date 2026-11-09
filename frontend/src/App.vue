@@ -3,7 +3,10 @@
     <Sidebar v-if="!route.meta.publica" />
 
     <v-main>
-      <router-view />
+      <div class="app-pagina">
+        <div class="app-pagina__conteudo"><router-view /></div>
+        <RodapeCreditos v-if="!route.meta.publica" />
+      </div>
     </v-main>
   </v-app>
 </template>
@@ -12,6 +15,7 @@
 import { watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Sidebar from './components/Sidebar.vue';
+import RodapeCreditos from './components/RodapeCreditos.vue';
 import { useAuthStore } from './stores/authStore';
 import { useConfigStore } from './stores/configStore';
 
@@ -28,3 +32,9 @@ watch(() => auth.isAuthenticated, (logado) => {
   }
 }, { immediate: true });
 </script>
+
+<style>
+/* Rodapé sempre no fim da tela, mesmo em páginas curtas */
+.app-pagina { display: flex; flex-direction: column; min-height: 100vh; }
+.app-pagina__conteudo { flex: 1; }
+</style>

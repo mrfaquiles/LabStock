@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\entrada_equipamento;
 use App\Models\equipamento;
 use App\Models\equipamento_local;
+use App\Models\equipamento_patrimonio;
 use App\Models\laboratorio;
 use App\Models\transferencia_equipamento;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * Equipamentos com estoque por laboratório (e unidade).
@@ -17,16 +20,22 @@ use Illuminate\Support\Facades\DB;
  */
 class equipamentoController extends Controller
 {
-    private array $relacoes = ['locais.laboratorio.unidade'];
+    private const ESTOQUE_INICIAL = 'Estoque inicial (cadastro)';
 
-    private function regras(bool $edicao = false): array
+    private array $relacoes = ['locais.laboratorio.unidade', 'patrimonios.laboratorio.unidade'];
+
+    private const MENSAGENS = [
+        'nome.unique' => 'Já existe um equipamento com este nome. Para mais unidades, use a entrada dele.',
+        'catmat.unique' => 'Já existe um equipamento com este CATMAT.',
+    ];
+
+    private function regras(?int $id = null): array
     {
-        $obrigatorio = $edicao ? 'sometimes|required' : 'required';
+        $obrigatorio = $id !== null ? ['sometimes', 'required'] : ['required'];
 
         return [
-            'nome' => "$obrigatorio|string|max:255",
-            'catmat' => "$obrigatorio|string|max:50",
-            'patrimonio' => 'nullable|string|max:255',
+            'nome' => [...$obrigatorio, 'string', 'max:255', Rule::unique('equipamentos', 'nome')->ignore($id, 'idequipamento')],
+            'catmat' => [...$obrigatorio, 'string', 'max:50', Rule::unique('equipamentos', 'catmat')->ignore($id, 'idequipamento')],
             'status' => 'nullable|string|max:255',
             'localizacao' => 'nullable|string|max:255',
             'descricao' => 'nullable|string',
@@ -42,25 +51,43 @@ class equipamentoController extends Controller
 
     /**
      * Cadastro com a quantidade inicial e o laboratório onde ela fica.
+     * Com números de patrimônio, cada número é uma unidade: a quantidade é o total de números.
      */
     public function store(Request $request)
     {
         $dados = $request->validate($this->regras() + [
             'quantidade' => 'nullable|integer|min:0|max:100000',
             'idlaboratorio' => 'nullable|exists:laboratorios,idlaboratorio',
-        ]);
+        ] + equipamento_patrimonio::regras(), self::MENSAGENS);
 
-        $equipamento = DB::transaction(function () use ($dados) {
-            $quantidade = $dados['quantidade'] ?? 1;
+        $equipamento = DB::transaction(function () use ($dados, $request) {
+            $patrimonios = equipamento_patrimonio::limpar($dados['patrimonios'] ?? []);
+            $quantidade = $patrimonios ? count($patrimonios) : ($dados['quantidade'] ?? 1);
             $idlaboratorio = $dados['idlaboratorio'] ?? null;
-            unset($dados['idlaboratorio']);
+            unset($dados['idlaboratorio'], $dados['patrimonios']);
 
             $equipamento = equipamento::create(array_merge($dados, ['quantidade' => $quantidade]));
+            $entrada = null;
             if ($quantidade > 0) {
                 equipamento_local::create([
                     'idequipamento' => $equipamento->idequipamento,
                     'idlaboratorio' => $idlaboratorio,
                     'quantidade' => $quantidade,
+                ]);
+                // O estoque inicial vira uma entrada, para o saldo sempre bater com as movimentações
+                $entrada = entrada_equipamento::create([
+                    'idequipamento' => $equipamento->idequipamento,
+                    'idlaboratorio' => $idlaboratorio,
+                    'idusuario' => $request->user()->id,
+                    'quantidade' => $quantidade,
+                    'data' => now(),
+                    'observacao' => mb_substr(self::ESTOQUE_INICIAL . ($patrimonios ? ' — Patrimônio(s): ' . implode(', ', $patrimonios) : ''), 0, 255),
+                ]);
+            }
+            foreach ($patrimonios as $numero) {
+                equipamento_patrimonio::create([
+                    'idequipamento' => $equipamento->idequipamento, 'numero' => $numero,
+                    'idlaboratorio' => $idlaboratorio, 'identrada' => $entrada?->identradaequipamento,
                 ]);
             }
             return $equipamento;
@@ -88,7 +115,7 @@ class equipamentoController extends Controller
             return response()->json(['message' => 'Equipamento não encontrado'], 404);
         }
 
-        $equipamento->update($request->validate($this->regras(true)));
+        $equipamento->update($request->validate($this->regras((int) $equipamento->idequipamento), self::MENSAGENS));
         return response()->json($equipamento->load($this->relacoes), 200);
     }
 
@@ -101,7 +128,21 @@ class equipamentoController extends Controller
         if (!$equipamento) {
             return response()->json(['message' => 'Equipamento não encontrado'], 404);
         }
-        $equipamento->delete();
+
+        // Cadastro feito por engano: sem baixas, transferências ou outras entradas, sai tudo junto.
+        // Com movimentações, o banco recusa e a mensagem pede para desativar (bootstrap/app.php).
+        $soEstoqueInicial = !$equipamento->saidas()->exists()
+            && !$equipamento->transferencias()->exists()
+            && !$equipamento->entradas()->where(fn ($q) => $q->whereNull('observacao')
+                ->orWhere('observacao', 'not like', self::ESTOQUE_INICIAL . '%'))->exists();
+
+        DB::transaction(function () use ($equipamento, $soEstoqueInicial) {
+            if ($soEstoqueInicial) {
+                equipamento_patrimonio::where('idequipamento', $equipamento->idequipamento)->delete();
+                $equipamento->entradas()->delete();
+            }
+            $equipamento->delete();
+        });
         return response()->json(['message' => 'Equipamento excluído com sucesso'], 200);
     }
 
@@ -122,6 +163,9 @@ class equipamentoController extends Controller
             'iddestino' => 'required|exists:laboratorios,idlaboratorio|different:idorigem',
             'quantidade' => 'required|integer|min:1',
             'observacao' => 'nullable|string|max:255',
+            // Quais unidades (patrimônios) estão indo
+            'patrimonios' => 'nullable|array',
+            'patrimonios.*' => 'integer|distinct',
         ], [
             'iddestino.different' => 'O destino precisa ser diferente da origem.',
         ], [
@@ -137,9 +181,27 @@ class equipamentoController extends Controller
                 ], 422);
             }
 
+            $patrimonios = equipamento_patrimonio::escolherNoLocal(
+                $equipamento->idequipamento, $dados['idorigem'] ?? null,
+                $dados['patrimonios'] ?? [], (int) $dados['quantidade'], (int) $origem->quantidade
+            );
+            if (is_string($patrimonios)) {
+                return response()->json(['message' => $patrimonios], 422);
+            }
+
             $origem->decrement('quantidade', $dados['quantidade']);
             equipamento_local::doLocal($equipamento->idequipamento, $dados['iddestino'])
                 ->increment('quantidade', $dados['quantidade']);
+
+            // Os patrimônios escolhidos passam a ficar no destino
+            foreach ($patrimonios as $patrimonio) {
+                $patrimonio->update(['idlaboratorio' => $dados['iddestino']]);
+            }
+
+            $observacao = trim(implode(' — ', array_filter([
+                $dados['observacao'] ?? null,
+                $patrimonios ? equipamento_patrimonio::listar($patrimonios) : null,
+            ])));
 
             $transferencia = transferencia_equipamento::create([
                 'idequipamento' => $equipamento->idequipamento,
@@ -148,7 +210,7 @@ class equipamentoController extends Controller
                 'quantidade' => $dados['quantidade'],
                 'idusuario' => $request->user()->id,
                 'data' => now(),
-                'observacao' => $dados['observacao'] ?? null,
+                'observacao' => mb_substr($observacao, 0, 255) ?: null,
             ]);
 
             return response()->json([

@@ -46,6 +46,9 @@ class AuthController extends Controller
 
         RateLimiter::clear($chave);
 
+        // Aproveita para apagar os logins vencidos deste usuário
+        $usuario->tokens()->where('expires_at', '<', now())->delete();
+
         // Validade do login definida em Configurações do Sistema
         $token = $usuario->createToken('labstock-spa', ['*'], now()->addHours(Configuracao::valor('sessao_horas')))->plainTextToken;
 

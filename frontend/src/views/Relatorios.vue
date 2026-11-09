@@ -209,13 +209,18 @@
           </p>
           <p class="text-body-2 text-medium-emphasis mb-3">Como você quer salvar?</p>
 
-          <v-btn block size="large" color="primary" variant="flat" class="text-none text-white mb-3 justify-start" prepend-icon="mdi-file-pdf-box" @click="salvarPdf">
-            Salvar em PDF
-            <span class="text-caption ms-2 opacity-70">para imprimir ou arquivar</span>
+          <!-- Título e explicação em duas linhas, para o texto não sair do botão -->
+          <v-btn block size="large" color="primary" variant="flat" class="text-none text-white mb-3 justify-start botao-opcao" prepend-icon="mdi-file-pdf-box" @click="salvarPdf">
+            <span class="d-flex flex-column align-start text-start">
+              <span>Salvar em PDF</span>
+              <span class="text-caption opacity-70">para imprimir ou arquivar</span>
+            </span>
           </v-btn>
-          <v-btn block size="large" color="green-darken-3" variant="tonal" class="text-none mb-3 justify-start" prepend-icon="mdi-file-excel-outline" @click="exportarCsv">
-            Baixar planilha (Excel/CSV)
-            <span class="text-caption ms-2 opacity-70">para editar e somar</span>
+          <v-btn block size="large" color="green-darken-3" variant="tonal" class="text-none mb-3 justify-start botao-opcao" prepend-icon="mdi-file-excel-outline" @click="exportarCsv">
+            <span class="d-flex flex-column align-start text-start">
+              <span>Baixar planilha (Excel/CSV)</span>
+              <span class="text-caption opacity-70">para editar e somar</span>
+            </span>
           </v-btn>
           <v-btn block variant="text" color="grey-darken-2" class="text-none" prepend-icon="mdi-eye-outline" @click="dialogExportar = false">
             Só visualizar na tela
@@ -410,3 +415,18 @@ const exportarCsv = () => {
   dialogExportar.value = false;
 };
 </script>
+
+<style scoped>
+/* Botões de formato com duas linhas: altura automática e quebra de texto */
+.botao-opcao {
+  height: auto !important;
+  min-height: 56px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  white-space: normal;
+}
+.botao-opcao :deep(.v-btn__content) {
+  white-space: normal;
+  line-height: 1.3;
+}
+</style>

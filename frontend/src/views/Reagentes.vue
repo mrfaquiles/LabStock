@@ -1,7 +1,7 @@
 <template>
   <v-container fluid class="pa-6">
     <!-- Cabeçalho e Botões de Ação -->
-    <CabecalhoPagina titulo="Reagentes" subtitulo="Controle de estoque, lotes e validades de reagentes químicos" icone="mdi-flask">
+    <CabecalhoPagina titulo="Reagentes" subtitulo="Controle de estoque, lotes e validades de reagentes químicos" icone="mdi-bottle-tonic">
       <v-btn v-if="auth.podeEditar" color="primary" class="text-none text-white" prepend-icon="mdi-plus" @click="abrirModalCadastro">
         Cadastrar Reagente
       </v-btn>
@@ -50,24 +50,15 @@
         <template v-slot:[`item.nome`]="{ item }">
           <div class="d-flex align-center">
             <span class="me-2">{{ item.nome }}</span>
-
-            <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-icon
-                  v-bind="props"
-                  size="small"
-                  color="grey-darken-1"
-                  class="cursor-pointer"
-                >
-                  mdi-help-circle-outline
-                </v-icon>
+            <PopoverInfo v-if="item.controlado" titulo="Produto controlado" icone-titulo="mdi-shield-alert" cor="warning">
+              <template #activator="{ props }">
+                <v-icon v-bind="props" size="small" color="deep-orange-darken-2" class="me-1 cursor-pointer">mdi-shield-alert</v-icon>
               </template>
-              <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-                <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">
-                  {{ item.descricao }}
-                </p>
-              </v-card>
-            </v-menu>
+              <div v-if="item.classificacao_controle"><span class="popover-info__rotulo">Lista / código</span>{{ item.classificacao_controle }}</div>
+              <div :class="{ 'popover-info__secao': item.classificacao_controle }">Cada uso exige uma justificativa e cada entrada, a origem do material. Esses registros não podem ser alterados nem apagados e aparecem no relatório de Produtos Controlados.</div>
+            </PopoverInfo>
+
+            <PopoverInfo v-if="item.descricao" titulo="Descrição" icone-titulo="mdi-text-box-outline">{{ item.descricao }}</PopoverInfo>
           </div>
         </template>
 
@@ -79,8 +70,8 @@
         <!-- Lotes com saldo (menu com o detalhe de cada lote) -->
         <template v-slot:[`item.lote`]="{ item }">
           <span v-if="!item.lotes?.length" class="text-grey">Sem saldo</span>
-          <v-menu v-else open-on-hover location="top" :close-on-content-click="false">
-            <template v-slot:activator="{ props }">
+          <PopoverInfo v-else titulo="Lotes em estoque" icone-titulo="mdi-package-variant-closed">
+            <template #activator="{ props }">
               <span v-bind="props" class="cursor-pointer">
                 {{ item.lotes[0].lote }}
                 <v-chip v-if="item.lotes.length > 1" size="x-small" variant="tonal" color="primary" class="ms-1">
@@ -88,18 +79,17 @@
                 </v-chip>
               </span>
             </template>
-            <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-              <p class="text-caption font-weight-bold text-blue-grey-darken-4 mb-1">Lotes em estoque</p>
-              <div v-for="lote in item.lotes" :key="lote.identradareagente" class="text-body-2 text-blue-grey-darken-4">
-                <strong>{{ lote.lote }}</strong> — {{ formatarQuantidade(lote.saldo, sigla(item)) }}
-                (val. {{ formatarDataExibicao(lote.data_validade) }})
-              </div>
-            </v-card>
-          </v-menu>
+            <div v-for="lote in item.lotes" :key="lote.identradareagente" class="popover-info__linha">
+              <span><strong>{{ lote.lote }}</strong> · {{ formatarQuantidade(lote.saldo, sigla(item)) }}</span>
+              <span :class="loteEstaVencido(lote) ? 'text-error font-weight-bold' : 'text-medium-emphasis'">
+                val. {{ formatarDataExibicao(lote.data_validade) }}
+              </span>
+            </div>
+          </PopoverInfo>
         </template>
 
         <!-- Validade mais próxima entre os lotes com saldo, com Alerta Visual -->
-        <template v-slot:[`item.data_validade`]="{ item }">
+        <template v-slot:[`item.proxima_validade`]="{ item }">
           <v-chip v-if="validadeExibida(item)" :color="verificarCorValidade(item)" size="small" variant="tonal">
             {{ formatarDataExibicao(validadeExibida(item)) }}
           </v-chip>
@@ -163,6 +153,43 @@
                 ></v-text-field>
               </v-col>
 
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="editedItem.cas"
+                  label="Código CAS (opcional)"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: 1336-21-6"
+                  name="cas_reagente"
+                  autocomplete="off"
+                ></v-text-field>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-switch
+                  v-model="editedItem.controlado"
+                  color="deep-orange-darken-2"
+                  inset
+                  density="comfortable"
+                  label="Produto controlado"
+                  :disabled="controladoOriginal && !auth.isAdmin"
+                  :hint="controladoOriginal && !auth.isAdmin ? 'Apenas o administrador pode remover do controle' : 'Exige justificativa em cada uso'"
+                  persistent-hint
+                ></v-switch>
+              </v-col>
+
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-if="editedItem.controlado"
+                  v-model="editedItem.classificacao_controle"
+                  label="Lista / código do controle *"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: Lista V - 066"
+                  :rules="[regras.obrigatorio]"
+                ></v-text-field>
+              </v-col>
+
               <v-col cols="12" md="3">
                 <v-select
                   v-model="editedItem.idunidademedida"
@@ -174,7 +201,8 @@
                   density="comfortable"
                   no-data-text="Nenhuma unidade cadastrada (rode php artisan db:seed)"
                   placeholder="Selecione"
-                  hint="Unidade em que o estoque é controlado"
+                  :disabled="unidadeTravada"
+                  :hint="unidadeTravada ? 'Não muda depois que há lotes registrados' : 'Unidade em que o estoque é controlado'"
                   persistent-hint
                   :rules="[regras.obrigatorio]"
                 ></v-select>
@@ -203,10 +231,11 @@
                 ></CampoQuantidade>
               </v-col>
 
-              <v-col cols="12" md="4">
+              <v-col v-if="!editedItem.idreagente" cols="12" md="4">
                 <v-text-field
                   v-model="editedItem.lote"
-                  label="Número do Lote *"
+                  label="Lote *"
+                  name="lote_reagente"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: LOT-2026-A"
@@ -241,7 +270,7 @@
               </v-col>
 
               <!-- Campo de Data com Pop-up do Calendário Padronizado -->
-              <v-col cols="12" md="6">
+              <v-col v-if="!editedItem.idreagente" cols="12" md="6">
                 <v-menu
                   v-model="menuData"
                   :close-on-content-click="false"
@@ -271,6 +300,66 @@
                     @update:model-value="menuData = false"
                   ></v-date-picker>
                 </v-menu>
+              </v-col>
+
+              <!-- Laboratório do lote inicial -->
+              <v-col v-if="!editedItem.idreagente" cols="12" md="6">
+                <v-select
+                  v-model="editedItem.idlaboratorio"
+                  :items="laboratorios"
+                  item-title="titulo"
+                  item-value="idlaboratorio"
+                  label="Laboratório do lote *"
+                  variant="outlined"
+                  density="comfortable"
+                  no-data-text="Nenhum laboratório cadastrado (o administrador cadastra em Configurações)"
+                  hint="Onde este lote fica guardado"
+                  persistent-hint
+                  :rules="[(v) => !(Number(editedItem.quantidade) > 0) || !!v || 'Campo obrigatório']"
+                ></v-select>
+              </v-col>
+
+              <!-- Correção de lote digitado errado: só o admin, e nunca em produto controlado -->
+              <v-col v-if="podeCorrigirLote" cols="12">
+                <div class="text-subtitle-2 mb-2">Corrigir lote digitado errado</div>
+                <v-row dense>
+                  <v-col cols="12" md="4">
+                    <v-select
+                      v-model="correcao.identrada"
+                      :items="editedItem.lotes"
+                      item-title="lote"
+                      item-value="identradareagente"
+                      label="Lote"
+                      variant="outlined"
+                      density="comfortable"
+                      hide-details
+                      @update:model-value="escolherLoteCorrecao"
+                    ></v-select>
+                  </v-col>
+                  <v-col cols="12" md="3">
+                    <v-text-field v-model="correcao.lote" label="Número correto" name="lote_correcao" autocomplete="off" variant="outlined" density="comfortable" hide-details :disabled="!correcao.identrada"></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="3">
+                    <v-text-field v-model="correcao.data_validade" label="Validade correta" type="date" variant="outlined" density="comfortable" hide-details :disabled="!correcao.identrada"></v-text-field>
+                  </v-col>
+                  <v-col cols="12" md="2" class="d-flex align-center">
+                    <v-btn color="primary" variant="tonal" class="text-none" block :disabled="!correcao.identrada || !correcao.lote || !correcao.data_validade" :loading="salvandoCorrecao" @click="corrigirLote">Corrigir</v-btn>
+                  </v-col>
+                </v-row>
+              </v-col>
+
+              <!-- Origem do lote inicial: opcional, só no cadastro -->
+              <v-col v-if="!editedItem.idreagente" cols="12">
+                <v-text-field
+                  v-model="editedItem.origem"
+                  label="Origem do lote inicial (opcional)"
+                  variant="outlined"
+                  density="comfortable"
+                  placeholder="Ex.: Nota fiscal 1234 / Doação do Campus X"
+                  maxlength="255"
+                  :hint="editedItem.controlado ? 'Recomendado para produto controlado: aparece no relatório de prestação de contas' : 'De onde veio o material: compra, nota fiscal, doação...'"
+                  persistent-hint
+                ></v-text-field>
               </v-col>
 
               <v-col cols="12" class="mt-2">
@@ -333,6 +422,14 @@
                 ></v-select>
               </v-col>
 
+              <v-col v-if="loteVencido" cols="12" class="pt-0">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-calendar-remove">
+                  O lote <strong>{{ loteSelecionado.lote }}</strong> está vencido desde
+                  <strong>{{ formatarDataExibicao(loteSelecionado.data_validade) }}</strong>.
+                  O reagente pode não reagir como esperado.
+                </v-alert>
+              </v-col>
+
               <v-col cols="12">
                 <!-- Digita em g/mg (ou mL/µL) e o sistema converte para a unidade do reagente -->
                 <CampoQuantidade
@@ -348,12 +445,20 @@
               <v-col cols="12">
                 <v-textarea
                   v-model="uso.observacao"
-                  label="Finalidade / Observação"
+                  :label="reagenteMov?.controlado ? 'Justificativa de uso *' : 'Finalidade / Observação'"
                   variant="outlined"
                   density="comfortable"
                   rows="2"
+                  counter="255"
+                  maxlength="255"
                   placeholder="Ex.: Aula prática de Química Analítica - Turma B"
+                  :rules="reagenteMov?.controlado ? [regras.justificativa] : []"
                 ></v-textarea>
+              </v-col>
+              <v-col v-if="reagenteMov?.controlado" cols="12">
+                <v-alert type="warning" variant="tonal" density="compact" icon="mdi-shield-alert">
+                  Produto controlado: este registro fica no relatório de prestação de contas e não poderá ser alterado nem apagado depois.
+                </v-alert>
               </v-col>
             </v-row>
           </v-form>
@@ -375,6 +480,31 @@
       </v-card>
     </v-dialog>
 
+    <!-- Confirmação de uso de lote vencido -->
+    <v-dialog v-model="dialogVencido" max-width="460px" persistent>
+      <v-card class="pa-4 rounded-lg">
+        <v-card-title class="text-h6 font-weight-bold text-error d-flex align-center">
+          <v-icon icon="mdi-calendar-remove" class="me-2" color="error"></v-icon>
+          Produto vencido
+        </v-card-title>
+        <v-card-text class="text-body-1 py-4">
+          O lote <strong>{{ loteSelecionado?.lote }}</strong> de <strong>{{ reagenteMov?.nome }}</strong>
+          está vencido desde <strong>{{ formatarDataExibicao(loteSelecionado?.data_validade) }}</strong>.
+          <br><br>
+          Deseja realmente utilizá-lo?
+        </v-card-text>
+        <v-card-actions class="px-4 pb-2">
+          <v-spacer></v-spacer>
+          <v-btn variant="outlined" color="grey-darken-1" class="text-none" @click="dialogVencido = false">
+            Não, escolher outro lote
+          </v-btn>
+          <v-btn color="error" variant="flat" class="text-none px-4" :loading="salvando" @click="confirmarUsoVencido">
+            Sim, utilizar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Modal de Nova Entrada de Lote -->
     <v-dialog v-model="dialogEntrada" max-width="600px" persistent>
       <v-card class="rounded-lg pa-4">
@@ -391,10 +521,26 @@
         <v-card-text>
           <v-form ref="formEntrada">
             <v-row>
+              <v-col cols="12">
+                <v-select
+                  v-model="entrada.idlaboratorio"
+                  :items="laboratorios"
+                  item-title="titulo"
+                  item-value="idlaboratorio"
+                  label="Laboratório do lote *"
+                  variant="outlined"
+                  density="comfortable"
+                  no-data-text="Nenhum laboratório cadastrado (o administrador cadastra em Configurações)"
+                  hint="Onde este lote fica guardado"
+                  persistent-hint
+                  :rules="[regras.obrigatorio]"
+                ></v-select>
+              </v-col>
               <v-col cols="12" md="6">
                 <v-text-field
                   v-model="entrada.lote"
-                  label="Número do Lote *"
+                  label="Lote *"
+                  name="lote_reagente"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: LOT-2026-B"
@@ -442,10 +588,11 @@
               <v-col cols="12">
                 <v-text-field
                   v-model="entrada.observacao"
-                  label="Observação"
+                  :label="reagenteMov?.controlado ? 'Origem da entrada *' : 'Observação'"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: Nota fiscal 1234 / Fornecedor X"
+                  :rules="reagenteMov?.controlado ? [regras.origem] : []"
                 ></v-text-field>
               </v-col>
             </v-row>
@@ -469,6 +616,7 @@ import api, { mensagemErro } from '../plugins/axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import { baixarPdf } from '../utils/exportarRelatorio';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import PopoverInfo from '../components/PopoverInfo.vue';
 import { useAuthStore } from '../stores/authStore';
 import { useConfigStore } from '../stores/configStore';
 
@@ -480,7 +628,8 @@ export default {
   components: {
     ModalConfirmacao,
     CabecalhoPagina,
-    CampoQuantidade
+    CampoQuantidade,
+    PopoverInfo
   },
   setup() {
     return { auth: useAuthStore(), config: useConfigStore() };
@@ -491,20 +640,22 @@ export default {
       dialog: false,
       dialogExcluir: false,
       dialogUso: false,
+      dialogVencido: false,
       dialogEntrada: false,
       menuData: false,
       menuDataEntrada: false,
       salvando: false,
       itemParaExcluir: null,
       reagenteMov: null,
+      controladoOriginal: false,
       dataValidadeObj: null,
       snackbar: { ativo: false, texto: '', cor: 'success' },
       headers: [
         { title: 'Nome do Reagente', key: 'nome', align: 'start' },
         { title: 'CATMAT', key: 'catmat' },
         { title: 'Quantidade', key: 'quantidade' },
-        { title: 'Lote', key: 'lote' },
-        { title: 'Validade', key: 'data_validade' },
+        { title: 'Lote', key: 'lote', value: (item) => (item.lotes || []).map((l) => l.lote).join(' ') },
+        { title: 'Validade', key: 'proxima_validade' },
         { title: 'Localização', key: 'localizacao' },
         { title: 'Ações', key: 'acoes', sortable: false, align: 'end' },
       ],
@@ -513,22 +664,38 @@ export default {
       editedItem: {},
       // Quantidades já na unidade base (o CampoQuantidade faz a conversão)
       uso: { identrada: null, quantidade: null, observacao: '' },
-      entrada: { lote: '', data_validade: '', quantidade: null, observacao: '' },
+      entrada: { idlaboratorio: null, lote: '', data_validade: '', quantidade: null, observacao: '' },
+      laboratorios: [],
+      correcao: { identrada: null, lote: '', data_validade: '' },
+      salvandoCorrecao: false,
       regras: {
         obrigatorio: (v) => (v !== null && v !== undefined && String(v).trim() !== '') || 'Campo obrigatório',
         naoNegativo: (v) => Number(v) >= 0 || 'A quantidade não pode ser negativa',
         positivo: (v) => Number(v) > 0 || 'Informe uma quantidade maior que zero',
+        justificativa: (v) => (v || '').trim().length >= 10 || 'Descreva a justificativa com pelo menos 10 caracteres',
+        origem: (v) => (v || '').trim().length >= 5 || 'Informe a origem (ex.: compra, nota fiscal, doação)',
         mesesAlerta: (v) => v === '' || v === null || v === undefined
           || (Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 36) || 'Informe de 1 a 36 meses',
       },
     }
   },
   computed: {
+    // O estoque está guardado nessa unidade: trocar mudaria o valor real
+    unidadeTravada() {
+      return !!this.editedItem.idreagente && (Number(this.editedItem.quantidade) > 0 || !!this.editedItem.lotes?.length);
+    },
+    podeCorrigirLote() {
+      return !!this.editedItem.idreagente && this.auth.isAdmin && !this.controladoOriginal && !!this.editedItem.lotes?.length;
+    },
     dataMinima() {
       return new Date();
     },
     loteSelecionado() {
       return this.reagenteMov?.lotes?.find(l => l.identradareagente === this.uso.identrada) || null;
+    },
+    loteVencido() {
+      const validade = this.loteSelecionado?.data_validade;
+      return !!validade && String(validade).substring(0, 10) < this.paraIso(new Date());
     },
     // Já convertida pelo CampoQuantidade (ex.: 500 g -> 0.5 kg)
     quantidadeUsoBase() {
@@ -551,6 +718,7 @@ export default {
   mounted() {
     this.carregarReagentes();
     this.carregarUnidadesMedida();
+    this.carregarLaboratorios();
   },
   methods: {
     avisar(texto, cor = 'success') {
@@ -563,6 +731,21 @@ export default {
       } catch (erro) {
         this.avisar(mensagemErro(erro, 'Erro ao carregar reagentes.'), 'error');
       }
+    },
+    async carregarLaboratorios() {
+      try {
+        const resposta = await api.get('/laboratorios');
+        this.laboratorios = resposta.data.map(l => ({
+          idlaboratorio: l.idlaboratorio,
+          titulo: l.unidade?.nome ? `${l.unidade.nome} › ${l.nome}` : l.nome,
+        }));
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao carregar laboratórios.'), 'error');
+      }
+    },
+    // Com um só laboratório cadastrado, não há o que escolher
+    laboratorioPadrao() {
+      return this.laboratorios.length === 1 ? this.laboratorios[0].idlaboratorio : null;
     },
     async carregarUnidadesMedida() {
       try {
@@ -581,17 +764,23 @@ export default {
         idreagente: null,
         nome: '',
         catmat: '',
+        cas: '',
         quantidade: null,
         idunidademedida: null,
         lote: '',
         data_validade: '',
+        idlaboratorio: this.laboratorioPadrao(),
         localizacao: '',
         meses_alerta: this.config.config.meses_alerta_padrao, // Configurações do Sistema
         descricao: '',
-        ativo: 1
+        ativo: 1,
+        controlado: false,
+        classificacao_controle: '',
+        origem: ''
       };
     },
     abrirModalCadastro() {
+      this.controladoOriginal = false;
       this.editedItem = this.novoReagente();
       this.dataValidadeObj = null;
       this.dialog = true;
@@ -602,10 +791,16 @@ export default {
       if (!valid) return;
 
       // Envia só os campos do cadastro (sem lotes/relacionamentos devolvidos pela API)
-      const campos = ['nome', 'catmat', 'idunidademedida', 'lote', 'data_validade', 'localizacao', 'meses_alerta', 'descricao', 'ativo'];
+      const campos = ['nome', 'catmat', 'cas', 'controlado', 'classificacao_controle', 'idunidademedida', 'localizacao', 'meses_alerta', 'descricao', 'ativo'];
       const dados = Object.fromEntries(campos.map(c => [c, this.editedItem[c]]));
       if (dados.meses_alerta === '') dados.meses_alerta = null;
-      if (!this.editedItem.idreagente) dados.quantidade = Number(this.editedItem.quantidade);
+      if (!this.editedItem.idreagente) {
+        dados.quantidade = Number(this.editedItem.quantidade);
+        dados.origem = this.editedItem.origem || null;
+        dados.lote = this.editedItem.lote;
+        dados.data_validade = this.editedItem.data_validade;
+        dados.idlaboratorio = this.editedItem.idlaboratorio;
+      }
 
       this.salvando = true;
       try {
@@ -625,9 +820,33 @@ export default {
       }
     },
     editarReagente(item) {
+      this.controladoOriginal = !!item.controlado;
       this.editedItem = { ...item, meses_alerta: item.meses_alerta || 4 };
-      this.dataValidadeObj = item.data_validade ? new Date(item.data_validade + 'T00:00:00') : null;
+      this.dataValidadeObj = null;
+      this.correcao = { identrada: null, lote: '', data_validade: '' };
       this.dialog = true;
+    },
+    escolherLoteCorrecao(id) {
+      const lote = this.editedItem.lotes?.find(l => l.identradareagente === id);
+      this.correcao = { identrada: id, lote: lote?.lote || '', data_validade: String(lote?.data_validade || '').substring(0, 10) };
+    },
+    async corrigirLote() {
+      this.salvandoCorrecao = true;
+      try {
+        await api.put(`/entradareagentes/${this.correcao.identrada}`, {
+          lote: this.correcao.lote,
+          data_validade: this.correcao.data_validade,
+        });
+        const { data } = await api.get(`/reagentes/${this.editedItem.idreagente}`);
+        this.editedItem.lotes = data.lotes;
+        this.correcao = { identrada: null, lote: '', data_validade: '' };
+        this.avisar('Lote corrigido.');
+        this.carregarReagentes();
+      } catch (erro) {
+        this.avisar(mensagemErro(erro, 'Erro ao corrigir o lote.'), 'error');
+      } finally {
+        this.salvandoCorrecao = false;
+      }
     },
     excluirReagente(item) {
       this.itemParaExcluir = item;
@@ -659,6 +878,18 @@ export default {
       const { valid } = await this.$refs.formUso.validate();
       if (!valid) return;
 
+      // Lote vencido: pergunta antes de registrar
+      if (this.loteVencido) {
+        this.dialogVencido = true;
+        return;
+      }
+      await this.enviarUso(false);
+    },
+    async confirmarUsoVencido() {
+      await this.enviarUso(true);
+      this.dialogVencido = false;
+    },
+    async enviarUso(confirmarVencido) {
       this.salvando = true;
       try {
         await api.post('/saidareagentes', {
@@ -666,6 +897,7 @@ export default {
           identrada: this.uso.identrada,
           quantidade: this.quantidadeUsoBase,
           observacao: this.uso.observacao || null,
+          confirmar_vencido: confirmarVencido,
         });
         this.avisar(`Uso registrado: ${this.formatarQuantidade(this.quantidadeUsoBase, this.sigla(this.reagenteMov))} descontado(s) do estoque.`);
         this.dialogUso = false;
@@ -680,7 +912,7 @@ export default {
     // ---------- Entrada de novo lote ----------
     abrirEntrada(item) {
       this.reagenteMov = item;
-      this.entrada = { lote: '', data_validade: '', quantidade: null, observacao: '' };
+      this.entrada = { idlaboratorio: this.laboratorioPadrao(), lote: '', data_validade: '', quantidade: null, observacao: '' };
       this.dialogEntrada = true;
       this.$nextTick(() => this.$refs.formEntrada?.resetValidation());
     },
@@ -694,6 +926,7 @@ export default {
       try {
         await api.post('/entradareagentes', {
           idreagente: this.reagenteMov.idreagente,
+          idlaboratorio: this.entrada.idlaboratorio,
           lote: this.entrada.lote,
           data_validade: this.entrada.data_validade,
           quantidade,
@@ -716,9 +949,13 @@ export default {
     // "0,5 g" em vez de "0,0005 kg"
     formatarQuantidade,
     formatarNaBase,
+    loteEstaVencido(lote) {
+      return !!lote?.data_validade && String(lote.data_validade).substring(0, 10) < this.paraIso(new Date());
+    },
     tituloLote(lote) {
       if (!lote) return '';
-      return `${lote.lote} — saldo ${this.formatarQuantidade(lote.saldo, this.sigla(this.reagenteMov))} — val. ${this.formatarDataExibicao(lote.data_validade)}`;
+      const vencido = this.loteEstaVencido(lote);
+      return `${lote.lote} — saldo ${this.formatarQuantidade(lote.saldo, this.sigla(this.reagenteMov))} — val. ${this.formatarDataExibicao(lote.data_validade)}${vencido ? ' (VENCIDO)' : ''}`;
     },
     // Impede digitar sinal negativo/exponencial em campos numéricos
     bloquearSinais(e) {
@@ -742,7 +979,7 @@ export default {
       return dataStr;
     },
     validadeExibida(item) {
-      return item.proxima_validade || item.data_validade;
+      return item.proxima_validade;
     },
     verificarCorValidade(item) {
       const data = this.validadeExibida(item);
@@ -763,10 +1000,11 @@ export default {
         subtitulo: `Posição do estoque em ${new Date().toLocaleDateString('pt-BR')}`,
         nomeArquivo: `labstock-reagentes-${new Date().toISOString().slice(0, 10)}`,
         tabelas: [{
-          colunas: ['Nome do Reagente', 'CATMAT', 'Quantidade', 'Lotes (saldo / validade)', 'Localização'],
+          colunas: ['Nome do Reagente', 'CATMAT', 'CAS', 'Quantidade', 'Lotes (saldo / validade)', 'Localização'],
           linhas: this.reagentes.map(r => [
             r.nome,
             r.catmat || '-',
+            r.cas || '-',
             this.formatarQuantidade(r.quantidade, this.sigla(r)),
             (r.lotes || []).map(l => `${l.lote}: ${this.formatarQuantidade(l.saldo, this.sigla(r))} (${this.formatarDataExibicao(l.data_validade)})`).join('\n') || '-',
             r.localizacao || '-',

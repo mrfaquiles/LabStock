@@ -61,8 +61,9 @@ class saidaVidrariaController extends Controller
             'quantidade' => 'required|integer|min:1',
             'motivo' => ['required', Rule::in(saida_vidraria::MOTIVOS)],
             'observacao' => 'required|string|min:10|max:255',
-            'data' => 'nullable|date',
+            'data' => 'nullable|date|before_or_equal:now',
         ], [
+            'data.before_or_equal' => 'A data da baixa não pode ser futura.',
             'observacao.required' => 'A justificativa da baixa é obrigatória.',
             'observacao.min' => 'Descreva a justificativa com pelo menos 10 caracteres.',
         ]);

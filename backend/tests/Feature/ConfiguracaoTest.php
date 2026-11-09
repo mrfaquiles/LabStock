@@ -61,7 +61,7 @@ class ConfiguracaoTest extends TestCase
         $this->putJson('/api/configuracoes', ['meses_alerta_padrao' => 6])->assertOk();
 
         $this->postJson('/api/reagentes', [
-            'nome' => 'Etanol', 'catmat' => '1', 'idunidademedida' => 2, 'quantidade' => 1,
+            'nome' => 'Etanol', 'catmat' => '1', 'idunidademedida' => 2, 'idlaboratorio' => $this->labId(), 'quantidade' => 1,
             'lote' => 'L1', 'data_validade' => now()->addYear()->toDateString(),
         ])->assertCreated()->assertJsonPath('meses_alerta', 6);
     }

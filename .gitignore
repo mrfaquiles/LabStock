@@ -1,1 +1,4 @@
 ﻿.claude/
+
+# Backups locais do banco (contêm dados e senhas)
+backups/

@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             ['email' => env('ADMIN_EMAIL', 'admin@labstock.local')],
             [
                 'nome' => 'Administrador',
-                'password' => env('ADMIN_PASSWORD', 'labstock@2026'),
+                'password' => env('ADMIN_PASSWORD') ?: 'labstock@2026',
                 'tipo' => User::PERFIL_ADMIN,
                 'ativo' => 1,
             ]

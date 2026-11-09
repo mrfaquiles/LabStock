@@ -83,7 +83,7 @@ class PedidoCompraController extends Controller
         $dados = $request->validate([
             'idreagente' => 'nullable|required_without:idvidraria|prohibits:idvidraria|exists:reagentes,idreagente',
             'idvidraria' => 'nullable|required_without:idreagente|exists:vidrarias,idvidraria',
-            'quantidade' => 'required|numeric|gt:0|max:9999999',
+            'quantidade' => 'required|numeric|min:0.000001|max:9999999',
             'data_pedido' => 'nullable|date',
             'previsao_entrega' => 'nullable|date',
             'observacao' => 'nullable|string|max:255',
@@ -91,6 +91,7 @@ class PedidoCompraController extends Controller
             'idreagente.required_without' => 'Escolha o reagente ou a vidraria do pedido.',
             'idvidraria.required_without' => 'Escolha o reagente ou a vidraria do pedido.',
             'idreagente.prohibits' => 'Um pedido é de um reagente ou de uma vidraria, não dos dois.',
+            'quantidade.min' => 'A quantidade mínima é de 1 mg ou 1 µL.',
         ]);
 
         if (!empty($dados['idvidraria']) && floor($dados['quantidade']) != $dados['quantidade']) {
@@ -124,11 +125,12 @@ class PedidoCompraController extends Controller
                 pedido_compra::SOLICITADO, pedido_compra::EM_LICITACAO,
                 pedido_compra::AGUARDANDO_ENTREGA, pedido_compra::CANCELADO,
             ])],
-            'quantidade' => 'sometimes|numeric|gt:0|max:9999999',
+            'quantidade' => 'sometimes|numeric|min:0.000001|max:9999999',
             'previsao_entrega' => 'nullable|date',
             'observacao' => 'nullable|string|max:255',
         ], [
             'status.in' => 'Para marcar como recebido, use a opção "Receber".',
+            'quantidade.min' => 'A quantidade mínima é de 1 mg ou 1 µL.',
         ]);
 
         $pedido->update($dados);
@@ -152,10 +154,14 @@ class PedidoCompraController extends Controller
 
         $ehReagente = (bool) $pedido->idreagente;
         $dados = $request->validate([
-            'quantidade' => 'required|numeric|gt:0|max:9999999',
+            'quantidade' => 'required|numeric|min:0.000001|max:9999999',
             'lote' => [Rule::requiredIf($ehReagente), 'nullable', 'string', 'max:255'],
             'data_validade' => [Rule::requiredIf($ehReagente), 'nullable', 'date'],
+            'idlaboratorio' => [Rule::requiredIf($ehReagente), 'nullable', 'exists:laboratorios,idlaboratorio'],
             'observacao' => 'nullable|string|max:255',
+        ], [
+            'quantidade.min' => 'A quantidade mínima é de 1 mg ou 1 µL.',
+            'idlaboratorio.required' => 'Informe o laboratório onde o lote foi guardado.',
         ]);
 
         if (!$ehReagente && floor($dados['quantidade']) != $dados['quantidade']) {
@@ -168,6 +174,7 @@ class PedidoCompraController extends Controller
             if ($ehReagente) {
                 entrada_reagente::create([
                     'idreagente' => $pedido->idreagente,
+                    'idlaboratorio' => $dados['idlaboratorio'],
                     'idusuario' => $request->user()->id,
                     'quantidade' => $dados['quantidade'],
                     'lote' => $dados['lote'],
@@ -179,6 +186,7 @@ class PedidoCompraController extends Controller
             } else {
                 entrada_vidraria::create([
                     'idvidraria' => $pedido->idvidraria,
+                    'idlaboratorio' => $pedido->vidraria?->idlaboratorio,
                     'idusuario' => $request->user()->id,
                     'quantidade' => $dados['quantidade'],
                     'data' => now(),

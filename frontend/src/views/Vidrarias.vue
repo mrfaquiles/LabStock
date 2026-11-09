@@ -1,7 +1,7 @@
 <template>
   <v-container fluid class="pa-6">
     <!-- Cabeçalho e Botões de Ação -->
-    <CabecalhoPagina titulo="Vidrarias" subtitulo="Controle de béqueres, provetas, balões e materiais de vidro" icone="mdi-cup">
+    <CabecalhoPagina titulo="Vidrarias" subtitulo="Controle de béqueres, provetas, balões e materiais de vidro" icone="mdi-flask">
       <v-btn v-if="auth.podeEditar" color="primary" class="text-none text-white" prepend-icon="mdi-plus" @click="abrirModalCadastro">
         Cadastrar Vidraria
       </v-btn>
@@ -37,7 +37,7 @@
 
     <!-- Abas principais: estoque e solicitações de baixa -->
     <v-tabs v-model="abaPrincipal" color="primary" class="mb-4">
-      <v-tab value="estoque" class="text-none" prepend-icon="mdi-cup">Estoque</v-tab>
+      <v-tab value="estoque" class="text-none" prepend-icon="mdi-flask">Estoque</v-tab>
       <v-tab value="solicitacoes" class="text-none" prepend-icon="mdi-glass-fragile">
         Solicitações de baixa
         <v-badge v-if="pendentes.length" :content="pendentes.length" color="warning" inline></v-badge>
@@ -74,23 +74,7 @@
           <div class="d-flex align-center">
             <span class="me-2">{{ item.nome }}</span>
 
-            <v-menu v-if="item.descricao" open-on-hover location="top" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-icon
-                  v-bind="props"
-                  size="small"
-                  color="grey-darken-1"
-                  class="cursor-pointer"
-                >
-                  mdi-help-circle-outline
-                </v-icon>
-              </template>
-              <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-                <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">
-                  {{ item.descricao }}
-                </p>
-              </v-card>
-            </v-menu>
+            <PopoverInfo v-if="item.descricao" titulo="Descrição" icone-titulo="mdi-text-box-outline">{{ item.descricao }}</PopoverInfo>
           </div>
         </template>
 
@@ -167,19 +151,7 @@
         <template v-slot:[`item.observacao`]="{ item }">
           <div class="d-flex align-center">
             <span class="text-truncate" style="max-width: 220px;">{{ item.motivo ? `${item.motivo}: ` : '' }}{{ item.observacao }}</span>
-            <v-menu open-on-hover location="top" :close-on-content-click="false">
-              <template v-slot:activator="{ props }">
-                <v-icon v-bind="props" size="small" color="grey-darken-1" class="cursor-pointer ms-1">mdi-help-circle-outline</v-icon>
-              </template>
-              <v-card class="pa-3 elevation-4 rounded-lg" color="blue-lighten-5" style="max-width: 350px; max-height: 200px; overflow-y: auto; border: 1px solid #b0bec5;">
-                <p class="text-caption font-weight-bold text-blue-grey-darken-4 mb-1">{{ item.motivo || 'Justificativa' }}</p>
-                <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">{{ item.observacao }}</p>
-                <template v-if="item.motivo_recusa">
-                  <p class="text-caption font-weight-bold text-error mt-2 mb-1">Motivo da recusa</p>
-                  <p class="text-body-2 mb-0 text-blue-grey-darken-4" style="white-space: pre-wrap; line-height: 1.4;">{{ item.motivo_recusa }}</p>
-                </template>
-              </v-card>
-            </v-menu>
+            <PopoverInfo :titulo="item.motivo || 'Justificativa'" icone-titulo="mdi-comment-text-outline">{{ item.observacao }}<div v-if="item.motivo_recusa" class="popover-info__secao"><span class="popover-info__rotulo text-error">Motivo da recusa</span>{{ item.motivo_recusa }}</div></PopoverInfo>
           </div>
         </template>
 
@@ -243,7 +215,15 @@
                 <v-text-field v-model="form.catmat" label="Código CATMAT *" variant="outlined" density="comfortable" placeholder="Ex.: VID-01"></v-text-field>
               </v-col>
               <v-col cols="12" md="4">
-                <v-text-field v-model="form.quantidade" label="Quantidade (un) *" type="number" min="0" step="1" variant="outlined" density="comfortable" @keydown="bloquearSinais"></v-text-field>
+                <v-text-field
+                  v-model="form.quantidade"
+                  :label="form.idvidraria ? 'Quantidade (un)' : 'Quantidade inicial (un) *'"
+                  type="number" min="0" step="1" variant="outlined" density="comfortable"
+                  :disabled="!!form.idvidraria"
+                  :hint="form.idvidraria ? 'Muda só por entrada ou baixa aprovada' : 'Vira a entrada inicial do estoque'"
+                  persistent-hint
+                  @keydown="bloquearSinais"
+                ></v-text-field>
               </v-col>
               <v-col cols="12" md="3">
                 <v-switch v-model="form.ativo" label="Ativo *" color="success" density="comfortable"></v-switch>
@@ -389,6 +369,7 @@
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import { baixarPdf } from '../utils/exportarRelatorio';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
+import PopoverInfo from '../components/PopoverInfo.vue';
 import { useVidrariaStore } from '../stores/vidrariaStore.js';
 import { useAuthStore } from '../stores/authStore';
 import { useConfigStore } from '../stores/configStore';

@@ -32,8 +32,19 @@ return [
     'string' => 'O campo :attribute deve ser um texto.',
     'unique' => 'Este :attribute já está em uso.',
 
+    'custom' => [
+        'patrimonios.*' => [
+            'unique' => 'O patrimônio :input já está cadastrado.',
+            'distinct' => 'O patrimônio :input foi digitado mais de uma vez.',
+        ],
+        'patrimonios_baixa.*' => [
+            'exists' => 'Patrimônio não encontrado.',
+        ],
+    ],
+
     'attributes' => [
         'catmat' => 'CATMAT',
+        'classificacao_controle' => 'classificação do controle',
         'data' => 'data',
         'data_validade' => 'data de validade',
         'descricao' => 'descrição',

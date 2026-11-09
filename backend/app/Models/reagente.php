@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RegistraHistorico;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class reagente extends Model
 {
-    use HasFactory;
+    use HasFactory, RegistraHistorico;
+
+    // O estoque muda por lote e registro de uso, que já são registros próprios
+    protected array $historicoIgnorar = ['quantidade'];
 
     protected $table = 'reagentes';
     protected $primaryKey = 'idreagente';
@@ -18,13 +22,19 @@ class reagente extends Model
         'idunidademedida',
         'quantidade',
         'catmat',
-        'lote',
-        'data_validade',
+        'cas',
+        'controlado',
+        'classificacao_controle',
         'localizacao',
         'meses_alerta',
         'imagem',
         'ativo',
     ];
+
+    protected function casts(): array
+    {
+        return ['controlado' => 'boolean'];
+    }
 
     public function unidadeMedida()
     {

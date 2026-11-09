@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RegistraHistorico;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -10,6 +11,11 @@ use Illuminate\Database\Eloquent\Model;
  */
 class saida_vidraria extends Model
 {
+    use RegistraHistorico;
+
+    // A movimentação já é o próprio registro; o histórico guarda edições e estornos
+    protected array $historicoAcoes = ['alterado', 'excluido'];
+
     public const PENDENTE = 'pendente';
     public const APROVADA = 'aprovada';
     public const RECUSADA = 'recusada';

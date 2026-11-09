@@ -33,7 +33,8 @@ class MovimentacaoTest extends TestCase
     {
         return $this->postJson('/api/reagentes', array_merge([
             'nome' => 'Percarbonato de Sódio',
-            'catmat' => '123456',
+            'catmat' => '123456' . ($extra['nome'] ?? ''),
+            'idlaboratorio' => $this->labId(),
             'idunidademedida' => 1, // kg
             'quantidade' => 2,
             'lote' => 'LOT-A',
@@ -45,6 +46,7 @@ class MovimentacaoTest extends TestCase
     {
         return $this->postJson('/api/entradareagentes', [
             'idreagente' => $idreagente,
+            'idlaboratorio' => $this->labId(),
             'quantidade' => $quantidade,
             'lote' => $lote,
             'data_validade' => $validade,
@@ -94,13 +96,20 @@ class MovimentacaoTest extends TestCase
         $this->assertEquals(2, $this->estoque($r['idreagente']));
     }
 
-    public function test_corrigir_lote_no_cadastro_corrige_o_lote_inicial(): void
+    public function test_admin_corrige_numero_e_validade_do_lote(): void
     {
         $r = $this->reagente();
+        $lote = $r['lotes'][0]['identradareagente'];
 
-        $atualizado = $this->putJson("/api/reagentes/{$r['idreagente']}", ['lote' => 'LOT-A-CORRIGIDO'])
-            ->assertOk()->json();
-        $this->assertEquals('LOT-A-CORRIGIDO', $atualizado['lotes'][0]['lote']);
+        // Só o administrador corrige um registro de movimentação
+        $this->putJson("/api/entradareagentes/{$lote}", ['lote' => 'LOT-A-CORRIGIDO'])->assertForbidden();
+
+        Sanctum::actingAs(User::factory()->create(['tipo' => 'admin']));
+        $this->putJson("/api/entradareagentes/{$lote}", ['lote' => 'LOT-A-CORRIGIDO', 'data_validade' => '2035-01-31'])->assertOk();
+
+        $atualizado = $this->getJson("/api/reagentes/{$r['idreagente']}")->json('lotes.0');
+        $this->assertEquals('LOT-A-CORRIGIDO', $atualizado['lote']);
+        $this->assertStringStartsWith('2035-01-31', $atualizado['data_validade']);
     }
 
     // ---------- Uso de reagente por lote ----------
@@ -209,6 +218,9 @@ class MovimentacaoTest extends TestCase
             'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'], 'quantidade' => 2,
         ])->json('idsaidareagente');
 
+        // Técnico não estorna; o administrador sim
+        $this->deleteJson("/api/saidareagentes/{$id}")->assertForbidden();
+        Sanctum::actingAs(User::factory()->create(['tipo' => 'admin']));
         $this->deleteJson("/api/saidareagentes/{$id}")->assertOk();
         $this->assertEquals(5, $this->estoque($r['idreagente']));
     }
@@ -220,6 +232,8 @@ class MovimentacaoTest extends TestCase
             'idreagente' => $r['idreagente'], 'identrada' => $r['lotes'][0]['identradareagente'], 'quantidade' => 2,
         ])->json('idsaidareagente');
 
+        $this->putJson("/api/saidareagentes/{$id}", ['observacao' => 'Técnico tentando editar'])->assertForbidden();
+        Sanctum::actingAs(User::factory()->create(['tipo' => 'admin']));
         $this->putJson("/api/saidareagentes/{$id}", ['quantidade' => 4, 'observacao' => 'Aula de titulação'])
             ->assertOk()
             ->assertJsonPath('observacao', 'Aula de titulação');

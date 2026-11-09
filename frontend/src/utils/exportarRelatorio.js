@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useConfigStore } from '../stores/configStore';
+import logoSvg from '../assets/logo-labstock.svg';
 
 /*
  * Exportação de relatórios do LabStock.
@@ -29,22 +30,47 @@ const identificacaoInstituicao = () => {
 const dataHoraAtual = () =>
   `${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
 
-export function baixarPdf({ titulo, subtitulo = '', tabelas, nomeArquivo }) {
+// O PDF só aceita imagem em pixels: converte a logo (SVG) para PNG uma única vez
+let logoPng = null;
+const carregarLogo = () => {
+  if (!logoPng) {
+    logoPng = new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 256;
+        canvas.getContext('2d').drawImage(img, 0, 0, 256, 256);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => resolve(null); // sem logo, o relatório sai do mesmo jeito
+      img.src = logoSvg;
+    });
+  }
+  return logoPng;
+};
+
+export async function baixarPdf({ titulo, subtitulo = '', tabelas, nomeArquivo }) {
   // Paisagem: os relatórios têm muitas colunas
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const largura = doc.internal.pageSize.getWidth();
   const margem = 12;
+  const logo = await carregarLogo();
 
-  // Faixa de cabeçalho
+  // Faixa de cabeçalho com a logo à esquerda
   doc.setFillColor(...MARINHO);
   doc.rect(0, 0, largura, 22, 'F');
+  let xTexto = margem;
+  if (logo) {
+    doc.addImage(logo, 'PNG', margem, 4, 14, 14);
+    xTexto = margem + 18;
+  }
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
-  doc.text(`LabStock - ${titulo}`, margem, 11);
+  doc.text(`LabStock - ${titulo}`, xTexto, 11);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(identificacaoInstituicao(), margem, 17);
+  doc.text(identificacaoInstituicao(), xTexto, 17);
 
   let y = 30;
   if (subtitulo) {
