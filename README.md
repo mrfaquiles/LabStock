@@ -95,7 +95,7 @@ Os testes usam SQLite em memória e não tocam no banco de desenvolvimento.
 - **Estoque só muda por movimentação.** A quantidade de um item nunca é editada direto: ela vem de entradas, usos, baixas e transferências.
 - **Tudo é guardado na unidade base** (kg, L ou un), com precisão de 1 mg ou 1 µL. A tela aceita g, mg, mL e µL e converte. A unidade de um reagente não muda depois que ele tem lotes.
 - **Lote e validade pertencem ao lote,** não ao cadastro do reagente. O uso desconta sempre de um lote escolhido.
-- **Produto controlado** exige classificação e justificativa de uso, e seus registros não podem ser apagados nem alterados.
+- **Produto controlado** exige justificativa de uso (a classificação é opcional), e seus registros não podem ser apagados nem alterados.
 - **Baixa de vidraria** precisa da aprovação do administrador (pode ser desligada em Configurações).
 - **Equipamento** tem um número de patrimônio por unidade. Nas transferências e baixas, escolhem-se os patrimônios que saem do local.
 - **Nome e CATMAT não se repetem** dentro de cada cadastro.

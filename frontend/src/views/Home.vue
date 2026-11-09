@@ -63,7 +63,7 @@
             class="pa-2"
           >
             <template v-slot:[`item.quantidade`]="{ item }">
-              {{ Number(item.quantidade) }} {{ item.unidade || '' }}
+              {{ formatarQuantidade(item.quantidade, item.unidade) }}
             </template>
             <template v-slot:[`item.data_validade`]="{ item }">
               <v-chip :color="painel.cor" size="small" variant="tonal">{{ formatarData(item.data_validade) }}</v-chip>
@@ -81,6 +81,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import api from '../plugins/axios';
+import { formatarQuantidade } from '../utils/unidades';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { useAuthStore } from '../stores/authStore';
 

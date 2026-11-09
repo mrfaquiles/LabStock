@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" font-family="'Times New Roman', Times, serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#111"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="460" fill="#fff"/>
+
+  <!-- Camadas -->
+  <text x="185" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">CLIENTE</text>
+  <text x="600" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">SERVIDOR</text>
+  <text x="1015" y="40" text-anchor="middle" font-size="22" font-weight="bold" fill="#111">DADOS</text>
+
+  <!-- Navegador -->
+  <rect x="40" y="70" width="290" height="270" rx="14" fill="#f3f3f3" stroke="#111" stroke-width="2"/>
+  <rect x="40" y="70" width="290" height="44" rx="14" fill="#dcdcdc" stroke="#111" stroke-width="2"/>
+  <rect x="40" y="100" width="290" height="14" fill="#dcdcdc"/>
+  <line x1="40" y1="114" x2="330" y2="114" stroke="#111" stroke-width="2"/>
+  <text x="185" y="99" text-anchor="middle" font-size="21" font-weight="bold" fill="#111">Navegador</text>
+  <text x="185" y="152" text-anchor="middle" font-size="19" fill="#111">SPA em Vue.js 3</text>
+  <text x="185" y="184" text-anchor="middle" font-size="19" fill="#111">Vuetify (interface)</text>
+  <text x="185" y="216" text-anchor="middle" font-size="19" fill="#111">Pinia (estado)</text>
+  <text x="185" y="248" text-anchor="middle" font-size="19" fill="#111">Vue Router (telas)</text>
+  <text x="185" y="280" text-anchor="middle" font-size="19" fill="#111">Axios (requisições)</text>
+  <text x="185" y="312" text-anchor="middle" font-size="19" fill="#111">jsPDF (relatórios)</text>
+
+  <!-- API -->
+  <rect x="455" y="70" width="290" height="270" rx="14" fill="#f3f3f3" stroke="#111" stroke-width="2"/>
+  <rect x="455" y="70" width="290" height="44" rx="14" fill="#dcdcdc" stroke="#111" stroke-width="2"/>
+  <rect x="455" y="100" width="290" height="14" fill="#dcdcdc"/>
+  <line x1="455" y1="114" x2="745" y2="114" stroke="#111" stroke-width="2"/>
+  <text x="600" y="99" text-anchor="middle" font-size="21" font-weight="bold" fill="#111">API REST</text>
+  <text x="600" y="152" text-anchor="middle" font-size="19" fill="#111">Laravel 12 (PHP 8.2)</text>
+  <text x="600" y="184" text-anchor="middle" font-size="19" fill="#111">Sanctum (autenticação)</text>
+  <text x="600" y="216" text-anchor="middle" font-size="19" fill="#111">Controle de perfis</text>
+  <text x="600" y="248" text-anchor="middle" font-size="19" fill="#111">Regras de negócio</text>
+  <text x="600" y="280" text-anchor="middle" font-size="19" fill="#111">Eloquent (ORM)</text>
+  <text x="600" y="312" text-anchor="middle" font-size="19" fill="#111">Histórico de alterações</text>
+
+  <!-- Banco: cilindro -->
+  <path d="M885,110 L885,300 A130,28 0 0 0 1145,300 L1145,110" fill="#f3f3f3" stroke="#111" stroke-width="2"/>
+  <ellipse cx="1015" cy="110" rx="130" ry="28" fill="#dcdcdc" stroke="#111" stroke-width="2"/>
+  <text x="1015" y="180" text-anchor="middle" font-size="21" font-weight="bold" fill="#111">MySQL</text>
+  <text x="1015" y="212" text-anchor="middle" font-size="19" fill="#111">(MariaDB)</text>
+  <text x="1015" y="252" text-anchor="middle" font-size="19" fill="#111">Estoque, lotes,</text>
+  <text x="1015" y="280" text-anchor="middle" font-size="19" fill="#111">movimentações e usuários</text>
+
+  <!-- Navegador -> API -->
+  <line x1="335" y1="178" x2="448" y2="178" stroke="#111" stroke-width="2.2" marker-end="url(#seta)"/>
+  <text x="392" y="160" text-anchor="middle" font-size="16" fill="#111">HTTP + JSON</text>
+  <text x="392" y="200" text-anchor="middle" font-size="15" font-style="italic" fill="#111">token Bearer</text>
+  <!-- API -> Navegador -->
+  <line x1="448" y1="252" x2="335" y2="252" stroke="#111" stroke-width="2.2" marker-end="url(#seta)"/>
+  <text x="392" y="278" text-anchor="middle" font-size="16" fill="#111">JSON</text>
+
+  <!-- API <-> Banco -->
+  <line x1="752" y1="178" x2="878" y2="178" stroke="#111" stroke-width="2.2" marker-end="url(#seta)"/>
+  <text x="815" y="160" text-anchor="middle" font-size="16" fill="#111">consultas SQL</text>
+  <line x1="878" y1="252" x2="752" y2="252" stroke="#111" stroke-width="2.2" marker-end="url(#seta)"/>
+  <text x="815" y="278" text-anchor="middle" font-size="16" fill="#111">resultados</text>
+
+  <!-- Usuários -->
+  <text x="185" y="390" text-anchor="middle" font-size="18" fill="#111">Usuários: administrador,</text>
+  <text x="185" y="416" text-anchor="middle" font-size="18" fill="#111">técnico e consulta</text>
+  <text x="600" y="390" text-anchor="middle" font-size="18" fill="#111">Valida perfil, dados e estoque</text>
+  <text x="600" y="416" text-anchor="middle" font-size="18" fill="#111">antes de gravar (transações)</text>
+  <text x="1015" y="390" text-anchor="middle" font-size="18" fill="#111">Chaves estrangeiras</text>
+  <text x="1015" y="416" text-anchor="middle" font-size="18" fill="#111">preservam o histórico</text>
+</svg>

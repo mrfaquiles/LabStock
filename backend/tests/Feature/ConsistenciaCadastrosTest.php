@@ -208,12 +208,12 @@ class ConsistenciaCadastrosTest extends TestCase
 
     // ---------- Campos que não podem ficar em branco ----------
 
-    public function test_produto_controlado_exige_classificacao(): void
+    public function test_classificacao_de_produto_controlado_e_opcional(): void
     {
-        $this->reagente(['controlado' => true])->assertStatus(422)->assertJsonValidationErrors(['classificacao_controle']);
+        $id = $this->reagente(['controlado' => true])->assertCreated()->assertJsonPath('classificacao_controle', null)->json('idreagente');
 
-        $id = $this->reagente(['controlado' => true, 'classificacao_controle' => 'Lista II - 032'])->assertCreated()->json('idreagente');
-        $this->putJson("/api/reagentes/{$id}", ['classificacao_controle' => ''])->assertStatus(422)->assertJsonValidationErrors(['classificacao_controle']);
+        $this->putJson("/api/reagentes/{$id}", ['classificacao_controle' => 'Lista II - 032'])
+            ->assertOk()->assertJsonPath('classificacao_controle', 'Lista II - 032');
     }
 
     public function test_lote_precisa_de_laboratorio(): void

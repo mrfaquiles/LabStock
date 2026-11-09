@@ -182,11 +182,10 @@
                 <v-text-field
                   v-if="editedItem.controlado"
                   v-model="editedItem.classificacao_controle"
-                  label="Lista / código do controle *"
+                  label="Lista / código do controle (opcional)"
                   variant="outlined"
                   density="comfortable"
                   placeholder="Ex.: Lista V - 066"
-                  :rules="[regras.obrigatorio]"
                 ></v-text-field>
               </v-col>
 

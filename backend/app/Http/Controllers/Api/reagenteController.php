@@ -10,7 +10,6 @@ use App\Rules\CodigoCas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Cadastro de reagentes com controle por lote.
@@ -75,16 +74,6 @@ class reagenteController extends Controller
         ];
     }
 
-    /** Produto controlado precisa dizer em qual lista/código se enquadra. */
-    private function exigirClassificacao(bool $controlado, ?string $classificacao): void
-    {
-        if ($controlado && !trim((string) $classificacao)) {
-            throw ValidationException::withMessages([
-                'classificacao_controle' => 'Informe a lista / código do produto controlado.',
-            ]);
-        }
-    }
-
     /**
      * Acrescenta os lotes com saldo e a validade mais próxima entre eles.
      */
@@ -119,7 +108,6 @@ class reagenteController extends Controller
     public function store(Request $request)
     {
         $dados = $request->validate($this->regras(), $this->mensagens());
-        $this->exigirClassificacao((bool) ($dados['controlado'] ?? false), $dados['classificacao_controle'] ?? null);
         $dados['meses_alerta'] = $dados['meses_alerta'] ?? Configuracao::valor('meses_alerta_padrao');
 
         $reagente = DB::transaction(function () use ($dados, $request) {
@@ -169,11 +157,6 @@ class reagenteController extends Controller
         }
 
         $dados = $request->validate($this->regras((int) $reagente->idreagente), $this->mensagens());
-        $this->exigirClassificacao(
-            (bool) ($dados['controlado'] ?? $reagente->controlado),
-            array_key_exists('classificacao_controle', $dados) ? $dados['classificacao_controle'] : $reagente->classificacao_controle
-        );
-
         // O estoque está guardado nessa unidade: trocar kg por L mudaria o valor real sem converter nada
         if (isset($dados['idunidademedida']) && (int) $dados['idunidademedida'] !== (int) $reagente->idunidademedida && $reagente->entradas()->exists()) {
             return response()->json(['message' => 'A unidade não pode ser trocada: este reagente já tem lotes registrados nela.'], 422);
