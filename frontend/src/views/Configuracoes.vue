@@ -16,7 +16,7 @@
     </v-tabs>
 
     <v-window v-model="aba">
-      <!-- ================= Aba Geral ================= -->
+      <!-- Aba Geral -->
       <v-window-item value="geral">
         <v-form ref="formGeral">
           <v-row>
@@ -164,7 +164,7 @@
         </v-form>
       </v-window-item>
 
-      <!-- ================= Aba Unidades (campus) ================= -->
+      <!-- Aba Unidades (campus) -->
       <v-window-item value="campus">
         <v-card class="elevation-1 rounded-lg">
           <div class="d-flex flex-wrap align-center justify-space-between ga-2 pa-4">
@@ -186,7 +186,7 @@
         </v-card>
       </v-window-item>
 
-      <!-- ================= Aba Laboratórios ================= -->
+      <!-- Aba Laboratórios -->
       <v-window-item value="laboratorios">
         <v-card class="elevation-1 rounded-lg">
           <div class="d-flex flex-wrap align-center justify-space-between ga-2 pa-4">
@@ -215,7 +215,7 @@
         </v-card>
       </v-window-item>
 
-      <!-- ================= Aba Unidades de medida ================= -->
+      <!-- Aba Unidades de medida -->
       <v-window-item value="unidades">
         <v-card class="elevation-1 rounded-lg">
           <div class="d-flex flex-wrap align-center justify-space-between ga-2 pa-4">
@@ -310,7 +310,7 @@ const regras = {
   inteiroEntre: (min, max) => (v) => (Number.isInteger(Number(v)) && Number(v) >= min && Number(v) <= max) || `Informe um valor de ${min} a ${max}`,
 };
 
-// ---------- Aba Geral ----------
+// Aba Geral
 const formGeral = ref(null);
 const geral = ref({ ...config.config });
 const restaurarGeral = () => { geral.value = { ...config.config }; };
@@ -327,7 +327,7 @@ const salvarGeral = async () => {
   }
 };
 
-// ---------- Laboratórios e unidades ----------
+// Laboratórios e unidades
 const campi = ref([]); // unidades da instituição (campus/sedes)
 const laboratorios = ref([]);
 const unidades = ref([]); // unidades de medida

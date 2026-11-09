@@ -278,7 +278,7 @@ const headersDetalhes = [
   { title: 'Finalidade / Observação', key: 'observacao' },
 ];
 
-// ---------- Datas ----------
+// Datas
 const paraIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const paraData = (iso) => (iso ? new Date(iso + 'T00:00:00') : null);
 const formatarData = (iso) => {
@@ -296,7 +296,7 @@ const atalhos = [
   { titulo: 'Este ano', inicio: () => new Date(hoje.getFullYear(), 0, 1) },
 ];
 
-// ---------- Estado ----------
+// Estado
 const tipo = ref('estoque');
 const categoria = ref('todas');
 const dataInicio = ref(paraIso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)));
@@ -342,7 +342,7 @@ const gerar = async () => {
   }
 };
 
-// ---------- Formatação ----------
+// Formatação
 const num = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 const nomeCategoria = (c) => NOMES[c] || c;
 const corCategoria = (c) => CORES[c] || 'grey';

@@ -416,7 +416,7 @@ const headers = [
   { title: 'Ações', key: 'acoes', sortable: false, align: 'end' }
 ];
 
-// ---------- Solicitações de baixa ----------
+// Solicitações de baixa
 const solicitacoes = ref([]);
 const carregandoSolicitacoes = ref(false);
 const abaPrincipal = ref('estoque');
@@ -589,7 +589,7 @@ const cancelar = async (item) => {
   }
 };
 
-// ---------- Cadastro de vidrarias ----------
+// Cadastro de vidrarias
 const abrirModalCadastro = () => {
     form.value = { idvidraria: null, nome: '', descricao: '', quantidade: 0, catmat: '', ativo: true, idlaboratorio: laboratorios.value.length === 1 ? laboratorios.value[0].idlaboratorio : null, localizacao: '' };
     dialog.value = true;

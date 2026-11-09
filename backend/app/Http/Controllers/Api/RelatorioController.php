@@ -73,7 +73,7 @@ class RelatorioController extends Controller
     }
 
     /**
-     * GET /relatorios/estoque — posição do estoque no período.
+     * GET /relatorios/estoque: posição do estoque no período.
      * O saldo histórico é calculado a partir do estoque atual, desfazendo as
      * movimentações posteriores ao fim do período.
      */
@@ -133,7 +133,7 @@ class RelatorioController extends Controller
     }
 
     /**
-     * GET /relatorios/controlados — prestação de contas dos produtos controlados:
+     * GET /relatorios/controlados: prestação de contas dos produtos controlados:
      * saldo do período e cada entrada e uso, com lote, usuário, data e justificativa.
      * Filtro opcional: ?idreagente=3
      */
@@ -212,7 +212,7 @@ class RelatorioController extends Controller
     }
 
     /**
-     * GET /relatorios/gastos — consumo de reagentes, quebras/perdas de vidrarias
+     * GET /relatorios/gastos: consumo de reagentes, quebras/perdas de vidrarias
      * e saídas de equipamentos no período.
      */
     public function gastos(Request $request)

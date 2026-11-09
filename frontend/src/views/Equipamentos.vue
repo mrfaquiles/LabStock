@@ -138,7 +138,7 @@
       </v-data-table>
     </v-card>
 
-    <!-- ============ Cadastro / Edição ============ -->
+    <!-- Cadastro / Edição -->
     <v-dialog v-model="dialog" max-width="700px" persistent>
       <v-card class="rounded-lg pa-4">
         <v-card-title class="d-flex justify-space-between align-center">
@@ -235,7 +235,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- ============ Movimentar ============ -->
+    <!-- Movimentar -->
     <v-dialog v-model="dialogMov" max-width="640px" persistent>
       <v-card v-if="equipMov" class="rounded-lg pa-4">
         <v-card-title class="d-flex justify-space-between align-center">
@@ -363,7 +363,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- ============ Histórico ============ -->
+    <!-- Histórico -->
     <v-dialog v-model="dialogHist" max-width="720px" scrollable>
       <v-card v-if="equipHist" class="rounded-lg">
         <v-card-title class="d-flex justify-space-between align-center pa-4">
@@ -393,7 +393,7 @@
                 </span>
               </div>
 
-              <!-- Edição: campo, antes → depois -->
+              <!-- Edição: campo, valor antigo e valor novo -->
               <div v-if="evento.tipo === 'alterado'" class="text-body-2">
                 <div v-for="(valor, campo) in evento.alteracoes" :key="campo">
                   <span class="text-medium-emphasis">{{ CAMPOS[campo] || campo }}:</span>
@@ -477,7 +477,7 @@ const corStatus = (status) => ({ Operacional: 'success', 'Em Manutenção': 'war
 // "Unidade 1 › Lab. de Química"
 const nomeLocal = (lab) => (lab ? `${lab.unidade ? `${lab.unidade.nome} › ` : ''}${lab.nome}` : 'Sem local definido');
 
-// ---------- Dados ----------
+// Dados
 const equipamentos = ref([]);
 const laboratorios = ref([]);
 const unidades = ref([]);
@@ -527,7 +527,7 @@ const quantidadeExibida = (item) => locaisNaUnidade(item).reduce((s, l) => s + l
 
 const semLocal = computed(() => equipamentos.value.filter((e) => e.locais.some((l) => !l.laboratorio)));
 
-// ---------- Cadastro / Edição ----------
+// Cadastro / Edição
 const dialog = ref(false);
 const salvando = ref(false);
 const formRef = ref(null);
@@ -582,7 +582,7 @@ const salvar = async () => {
   }
 };
 
-// ---------- Movimentar ----------
+// Movimentar
 const dialogMov = ref(false);
 const formMov = ref(null);
 const equipMov = ref(null);
@@ -670,7 +670,7 @@ const salvarMovimentacao = async () => {
   }
 };
 
-// ---------- Histórico ----------
+// Histórico
 const dialogHist = ref(false);
 const equipHist = ref(null);
 const historico = ref([]);
@@ -690,7 +690,7 @@ const abrirHistorico = async (item) => {
   }
 };
 
-// ---------- Excluir ----------
+// Excluir
 const dialogExcluir = ref(false);
 const itemParaExcluir = ref(null);
 const excluir = (item) => {
@@ -712,7 +712,7 @@ const deletarItemConfirmado = async () => {
   dialogExcluir.value = false;
 };
 
-// ---------- Relatório ----------
+// Relatório
 // PDF gerado direto no navegador (o antigo window.open era bloqueado como pop-up)
 const emitirRelatorio = () => {
   const unidadeFiltrada = unidades.value.find((u) => u.idunidade === filtroUnidade.value);

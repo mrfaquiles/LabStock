@@ -16,9 +16,6 @@ class vidrariaController extends Controller
         'catmat.unique' => 'Já existe uma vidraria com este CATMAT.',
     ];
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         //
@@ -26,9 +23,6 @@ class vidrariaController extends Controller
         return response()->json($vidrarias, 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         //
@@ -61,9 +55,6 @@ class vidrariaController extends Controller
         return response()->json($vidraria->load('laboratorio.unidade'), 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
@@ -74,9 +65,6 @@ class vidrariaController extends Controller
         return response()->json($vidraria, 200);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         //
@@ -97,9 +85,6 @@ class vidrariaController extends Controller
         return response()->json($vidraria->load('laboratorio.unidade'), 200);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         //

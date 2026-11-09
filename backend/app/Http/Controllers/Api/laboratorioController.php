@@ -8,18 +8,12 @@ use Illuminate\Http\Request;
 
 class laboratorioController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $laboratorios = laboratorio::with('unidade')->orderBy('nome')->get();
         return response()->json($laboratorios, 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $dados = $request->validate([
@@ -31,9 +25,6 @@ class laboratorioController extends Controller
         return response()->json($laboratorio->load('unidade'), 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $laboratorio = laboratorio::with('unidade')->find($id);
@@ -43,9 +34,6 @@ class laboratorioController extends Controller
         return response()->json($laboratorio, 200);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
         $laboratorio = laboratorio::find($id);

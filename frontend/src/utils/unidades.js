@@ -15,12 +15,12 @@ export const ESCALAS = {
 // Unidades oferecidas para um reagente (sem subdivisão, só a própria unidade)
 export const unidadesDisponiveis = (siglaBase) => ESCALAS[siglaBase] || [{ sigla: siglaBase || 'un', fator: 1 }];
 
-// 500 g → 0.5 (kg). Seis casas decimais, como no banco (precisão de 1 mg / 1 µL)
+// 500 g vira 0.5 (kg). Seis casas decimais, como no banco (precisão de 1 mg / 1 µL)
 export const paraBase = (valor, fator = 1) => Math.round(Number(valor || 0) * Number(fator) * 1e6) / 1e6;
 
 const numero = (v, casas = 3) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: casas });
 
-// Maior unidade em que o valor fica >= 1. Ex.: 0.0005 kg → { valor: 0.5, sigla: 'g' }
+// Maior unidade em que o valor fica >= 1. Ex.: 0.0005 kg vira { valor: 0.5, sigla: 'g' }
 export const melhorUnidade = (valorBase, siglaBase) => {
   const escalas = unidadesDisponiveis(siglaBase);
   const v = Number(valorBase || 0);

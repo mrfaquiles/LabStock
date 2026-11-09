@@ -37,7 +37,7 @@ trait RegistraHistorico
                     continue;
                 }
                 $antigo = $model->getOriginal($campo);
-                // Ignora "mudanças" que são só de tipo (ex.: 1 → "1")
+                // Ignora "mudanças" que são só de tipo (ex.: 1 e "1")
                 if ((string) $antigo === (string) $novo) {
                     continue;
                 }

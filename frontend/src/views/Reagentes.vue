@@ -865,7 +865,7 @@ export default {
       this.dialogExcluir = false;
     },
 
-    // ---------- Registro de uso ----------
+    // Registro de uso
     abrirUso(item) {
       this.reagenteMov = item;
       // Sugere o lote que vence primeiro (FEFO)
@@ -908,7 +908,7 @@ export default {
       }
     },
 
-    // ---------- Entrada de novo lote ----------
+    // Entrada de novo lote
     abrirEntrada(item) {
       this.reagenteMov = item;
       this.entrada = { idlaboratorio: this.laboratorioPadrao(), lote: '', data_validade: '', quantidade: null, observacao: '' };
@@ -941,7 +941,7 @@ export default {
       }
     },
 
-    // ---------- Utilitários ----------
+    // Utilitários
     sigla(item) {
       return item?.unidade_medida?.sigla || '';
     },

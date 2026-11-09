@@ -10,14 +10,11 @@ class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         $this->call(UnidadeMedidaSeeder::class);
 
-        // Administrador inicial — troque a senha após o primeiro acesso
+        // Administrador inicial: troque a senha após o primeiro acesso
         User::firstOrCreate(
             ['email' => env('ADMIN_EMAIL', 'admin@labstock.local')],
             [

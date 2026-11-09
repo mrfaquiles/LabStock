@@ -4,7 +4,7 @@ namespace App\Support;
 
 /**
  * Formata quantidades guardadas na unidade base (kg, L) na unidade mais legível.
- * Ex.: 0.0005 kg → "0,5 g"; 0.25 L → "250 mL"; 2.5 kg → "2,5 kg".
+ * Ex.: 0.0005 kg vira "0,5 g" e 0.25 L vira "250 mL".
  * Mesma regra do frontend (src/utils/unidades.js).
  */
 class Quantidade

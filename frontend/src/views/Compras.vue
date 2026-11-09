@@ -19,7 +19,7 @@
     </v-tabs>
 
     <v-window v-model="aba">
-      <!-- ===================== PREVISÃO ===================== -->
+      <!-- Aba de previsão -->
       <v-window-item value="previsao">
         <v-card class="elevation-1 rounded-lg pa-4 mb-4">
           <v-row align="center">
@@ -137,7 +137,7 @@
         </v-card>
       </v-window-item>
 
-      <!-- ===================== PEDIDOS ===================== -->
+      <!-- Aba de pedidos -->
       <v-window-item value="pedidos">
         <v-card class="elevation-1 rounded-lg">
           <div class="d-flex flex-wrap align-center justify-space-between ga-2 pa-4">
@@ -429,7 +429,7 @@ const bloquearSinais = (e) => {
   if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
 };
 
-// ---------------- Previsão ----------------
+// Previsão
 const filtros = ref({ meses_base: 12, meses_cobrir: 12, margem: config.config.margem_seguranca_percentual, categoria: 'todas' });
 const previsao = ref([]);
 const parametros = ref(null);
@@ -495,7 +495,7 @@ const exportar = (formato) => {
   formato === 'pdf' ? baixarPdf(conteudo) : baixarCsv(conteudo);
 };
 
-// ---------------- Pedidos ----------------
+// Pedidos
 const pedidos = ref([]);
 const carregandoPedidos = ref(false);
 const abaPedidos = ref('andamento');

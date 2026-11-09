@@ -92,9 +92,6 @@ class reagenteController extends Controller
         return $reagente ? $this->comLotes($reagente) : null;
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $reagentes = reagente::comLotes()->orderBy('nome')->get()
@@ -102,9 +99,6 @@ class reagenteController extends Controller
         return response()->json($reagentes, 200);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $dados = $request->validate($this->regras(), $this->mensagens());
@@ -133,9 +127,6 @@ class reagenteController extends Controller
         return response()->json($this->carregar($reagente->idreagente), 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $reagente = $this->carregar($id);
@@ -146,7 +137,6 @@ class reagenteController extends Controller
     }
 
     /**
-     * Update the specified resource in storage.
      * A quantidade é ignorada: o estoque muda apenas por entrada de lote ou registro de uso.
      */
     public function update(Request $request, string $id)
@@ -177,7 +167,6 @@ class reagenteController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
      * Sem nenhum uso registrado (ex.: cadastro feito por engano), os lotes saem junto.
      * Com uso registrado, o histórico é preservado e a exclusão é recusada.
      */

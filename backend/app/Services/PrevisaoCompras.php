@@ -105,7 +105,7 @@ class PrevisaoCompras
             default => 'ok',
         };
 
-        // Quantidades na unidade mais legível (ex.: 0,0005 kg → 0,5 g)
+        // Quantidades na unidade mais legível (ex.: 0,0005 kg aparece como 0,5 g)
         $q = fn (float $valor) => Quantidade::formatar($valor, $unidade);
         $justificativa = $media > 0
             ? sprintf(

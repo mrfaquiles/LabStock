@@ -74,7 +74,6 @@ class DemoSeeder extends Seeder
         $this->command?->info('Dados de demonstração inseridos.');
     }
 
-    // ------------------------------------------------------------------
     private function usuarios(): void
     {
         $lista = [
@@ -112,7 +111,6 @@ class DemoSeeder extends Seeder
         }
     }
 
-    // ------------------------------------------------------------------
     private function reagentes(): void
     {
         $kg = unidade_medida::where('sigla', 'kg')->value('idunidademedida');
@@ -268,7 +266,6 @@ class DemoSeeder extends Seeder
         return str_pad($sigla, 3, 'X') . '-' . sprintf('%02d', $n);
     }
 
-    // ------------------------------------------------------------------
     private function vidrarias(): void
     {
         // nome, catmat, local, quantidade comprada, quebras no ano
@@ -339,7 +336,6 @@ class DemoSeeder extends Seeder
         }
     }
 
-    // ------------------------------------------------------------------
     private function equipamentos(): void
     {
         // nome, catmat, patrimônio, status, [lab => quantidade]
