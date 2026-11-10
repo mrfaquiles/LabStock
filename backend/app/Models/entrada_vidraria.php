@@ -13,7 +13,7 @@ class entrada_vidraria extends Model
     protected array $historicoAcoes = ['alterado', 'excluido'];
 
     protected $table = 'entrada_vidrarias';
-    protected $primaryKey = 'identravidraria';
+    protected $primaryKey = 'identradavidraria';
     protected $fillable = [
         'idvidraria',
         'idlaboratorio',

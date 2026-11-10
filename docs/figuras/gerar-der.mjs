@@ -17,7 +17,7 @@ E('users', 4, 0, ['id PK', 'nome', 'email', 'tipo (perfil)', 'ativo']);
 
 E('pedidos_compra', 0, 1, ['idpedido PK', 'idreagente FK', 'idvidraria FK', 'idusuario FK', 'quantidade', 'status']);
 E('vidrarias', 1, 1, ['idvidraria PK', 'idlaboratorio FK', 'nome', 'catmat', 'quantidade']);
-E('entrada_vidrarias', 2, 1, ['identravidraria PK', 'idvidraria FK', 'idlaboratorio FK', 'idusuario FK', 'quantidade']);
+E('entrada_vidrarias', 2, 1, ['identradavidraria PK', 'idvidraria FK', 'idlaboratorio FK', 'idusuario FK', 'quantidade']);
 E('saida_vidrarias', 3, 1, ['idsaidavidraria PK', 'idvidraria FK', 'idusuario FK', 'idaprovador FK', 'quantidade', 'motivo', 'status']);
 E('historico_alteracoes', 4, 1, ['id PK', 'idusuario FK', 'entidade', 'registro_id', 'acao', 'alteracoes']);
 
