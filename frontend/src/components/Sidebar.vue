@@ -1,9 +1,16 @@
 <template>
-  <v-navigation-drawer 
-    v-model="drawer" 
-    permanent 
-    style="background-color: #0B132B !important; color: #FFFFFF;" 
-    theme="dark" 
+  <!-- Em telas pequenas o menu fica escondido e abre pelo botão desta barra -->
+  <v-app-bar v-if="!telaGrande" color="menu" theme="dark" density="compact" elevation="2">
+    <v-app-bar-nav-icon aria-label="Abrir menu" @click="drawer = !drawer"></v-app-bar-nav-icon>
+    <v-app-bar-title class="font-weight-bold text-cyan-accent-3">LABSTOCK</v-app-bar-title>
+  </v-app-bar>
+
+  <v-navigation-drawer
+    v-model="drawer"
+    :permanent="telaGrande"
+    :temporary="!telaGrande"
+    color="menu"
+    theme="dark"
     width="260"
     elevation="2"
   >
@@ -60,11 +67,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useDisplay } from 'vuetify';
 import { useAuthStore } from '../stores/authStore';
 
-const drawer = ref(true);
+// Menu fixo a partir de telas médias (notebook); no celular vira gaveta
+const { mdAndUp: telaGrande } = useDisplay();
+const drawer = ref(telaGrande.value);
+watch(telaGrande, (grande) => { drawer.value = grande; });
 const auth = useAuthStore();
 const router = useRouter();
 
@@ -95,8 +106,8 @@ const sair = async () => {
   flex-shrink: 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0b132b;
-  background: linear-gradient(135deg, #18ffff 0%, #40c4ff 100%);
+  color: rgb(var(--v-theme-menu));
+  background: linear-gradient(135deg, rgb(var(--v-theme-destaque)) 0%, #40c4ff 100%);
 }
 .usuario-texto {
   flex: 1;

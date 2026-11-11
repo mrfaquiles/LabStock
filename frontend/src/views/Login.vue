@@ -187,8 +187,8 @@ const entrar = async () => {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  color: #0b132b;
-  background: linear-gradient(135deg, #18ffff, #40c4ff);
+  color: rgb(var(--v-theme-menu));
+  background: linear-gradient(135deg, rgb(var(--v-theme-destaque)), #40c4ff);
 }
 .login-marca__nome { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
 .login-marca__sub { font-size: 0.8rem; color: rgba(255, 255, 255, 0.55); padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, 0.2); }

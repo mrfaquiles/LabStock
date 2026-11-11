@@ -3,11 +3,11 @@
     <v-card class="pa-4 rounded-lg">
       <v-card-title class="text-h6 font-weight-bold text-error d-flex align-center">
         <v-icon icon="mdi-alert-circle" class="me-2" color="error"></v-icon>
-        Confirmar Exclusão
+        {{ titulo }}
       </v-card-title>
 
       <v-card-text class="text-body-1 py-4">
-        Você tem certeza que deseja excluir <strong>{{ nomeItem }}</strong>?
+        {{ pergunta }} <strong>{{ nomeItem }}</strong>?
       </v-card-text>
 
       <v-card-actions class="px-4 pb-2">
@@ -16,7 +16,7 @@
           Não
         </v-btn>
         <v-btn color="error" variant="flat" class="text-none px-4" @click="confirmar">
-          Sim, excluir
+          {{ textoConfirmar }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -28,7 +28,11 @@ import { computed } from 'vue';
 
 const props = defineProps({
   modelValue: Boolean,
-  nomeItem: String
+  nomeItem: String,
+  // Por padrão é a confirmação de exclusão; outras telas trocam os textos (ex.: cancelar pedido)
+  titulo: { type: String, default: 'Confirmar Exclusão' },
+  pergunta: { type: String, default: 'Você tem certeza que deseja excluir' },
+  textoConfirmar: { type: String, default: 'Sim, excluir' },
 });
 
 const emit = defineEmits(['update:modelValue', 'confirm']);

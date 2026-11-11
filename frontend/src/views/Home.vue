@@ -82,6 +82,7 @@
 import { ref, computed, onMounted } from 'vue';
 import api from '../plugins/axios';
 import { formatarQuantidade } from '../utils/unidades';
+import { formatarData } from '../utils/datas';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { useAuthStore } from '../stores/authStore';
 
@@ -123,11 +124,6 @@ const paineis = computed(() => [
   },
 ]);
 
-const formatarData = (dataStr) => {
-  if (!dataStr) return '';
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-};
 
 const textoDias = (dias) => {
   if (dias < 0) return `vencido há ${Math.abs(dias)} dia(s)`;

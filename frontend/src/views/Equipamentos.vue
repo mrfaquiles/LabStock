@@ -428,6 +428,7 @@ import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import PopoverInfo from '../components/PopoverInfo.vue';
 import { baixarPdf } from '../utils/exportarRelatorio';
+import { hojeIso } from '../utils/datas';
 import { useAuthStore } from '../stores/authStore';
 
 const auth = useAuthStore();
@@ -719,7 +720,7 @@ const emitirRelatorio = () => {
   baixarPdf({
     titulo: 'Relatório de Equipamentos',
     subtitulo: `Posição em ${new Date().toLocaleDateString('pt-BR')}${unidadeFiltrada ? `   |   ${unidadeFiltrada.nome}` : ''}`,
-    nomeArquivo: `labstock-equipamentos-${new Date().toISOString().slice(0, 10)}`,
+    nomeArquivo: `labstock-equipamentos-${hojeIso()}`,
     tabelas: [{
       colunas: ['Nome do Equipamento', 'Patrimônios', 'CATMAT', 'Status', 'Qtd.', 'Onde está'],
       linhas: equipamentosFiltrados.value.map((e) => [

@@ -24,55 +24,11 @@
           </v-col>
 
           <v-col cols="12" sm="6" md="3">
-            <v-menu v-model="menuInicio" :close-on-content-click="false" min-width="auto">
-              <template v-slot:activator="{ props }">
-                <v-text-field
-                  v-bind="props"
-                  :model-value="formatarData(dataInicio)"
-                  label="Data inicial *"
-                  readonly
-                  variant="outlined"
-                  density="comfortable"
-                  append-inner-icon="mdi-calendar"
-                  hide-details="auto"
-                  :rules="[regras.obrigatorio]"
-                ></v-text-field>
-              </template>
-              <v-date-picker
-                :model-value="paraData(dataInicio)"
-                :max="paraData(dataFim) || undefined"
-                class="elevation-3 rounded-lg"
-                density="compact"
-                hide-header
-                @update:model-value="d => { dataInicio = paraIso(d); menuInicio = false; }"
-              ></v-date-picker>
-            </v-menu>
+            <campo-data v-model="dataInicio" label="Data inicial *" :max="dataFim" hide-details="auto" :rules="[regras.obrigatorio]"></campo-data>
           </v-col>
 
           <v-col cols="12" sm="6" md="3">
-            <v-menu v-model="menuFim" :close-on-content-click="false" min-width="auto">
-              <template v-slot:activator="{ props }">
-                <v-text-field
-                  v-bind="props"
-                  :model-value="formatarData(dataFim)"
-                  label="Data final *"
-                  readonly
-                  variant="outlined"
-                  density="comfortable"
-                  append-inner-icon="mdi-calendar"
-                  hide-details="auto"
-                  :rules="[regras.obrigatorio, regras.periodo]"
-                ></v-text-field>
-              </template>
-              <v-date-picker
-                :model-value="paraData(dataFim)"
-                :min="paraData(dataInicio) || undefined"
-                class="elevation-3 rounded-lg"
-                density="compact"
-                hide-header
-                @update:model-value="d => { dataFim = paraIso(d); menuFim = false; }"
-              ></v-date-picker>
-            </v-menu>
+            <campo-data v-model="dataFim" label="Data final *" :min="dataInicio" hide-details="auto" :rules="[regras.obrigatorio, regras.periodo]"></campo-data>
           </v-col>
 
           <v-col cols="12" sm="6" md="3">
@@ -237,6 +193,7 @@ import api, { mensagemErro } from '../plugins/axios';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { baixarPdf, baixarCsv } from '../utils/exportarRelatorio';
 import { useConfigStore } from '../stores/configStore';
+import { paraIso, formatarData } from '../utils/datas';
 
 const NOMES = { reagentes: 'Reagente', vidrarias: 'Vidraria', equipamentos: 'Equipamento' };
 const CORES = { reagentes: 'green-darken-3', vidrarias: 'blue-darken-2', equipamentos: 'blue-grey-darken-2' };
@@ -279,13 +236,6 @@ const headersDetalhes = [
 ];
 
 // Datas
-const paraIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const paraData = (iso) => (iso ? new Date(iso + 'T00:00:00') : null);
-const formatarData = (iso) => {
-  if (!iso) return '';
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
-};
 
 const hoje = new Date();
 const atalhos = [
@@ -301,8 +251,6 @@ const tipo = ref('estoque');
 const categoria = ref('todas');
 const dataInicio = ref(paraIso(new Date(hoje.getFullYear(), hoje.getMonth(), 1)));
 const dataFim = ref(paraIso(hoje));
-const menuInicio = ref(false);
-const menuFim = ref(false);
 const loading = ref(false);
 const erro = ref('');
 const resultado = ref(null);

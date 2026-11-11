@@ -10,6 +10,15 @@
       {{ snackbar.texto }}
     </v-snackbar>
 
+    <ModalConfirmacao
+      v-model="dialogCancelar"
+      titulo="Cancelar pedido"
+      pergunta="Você tem certeza que deseja cancelar o pedido de"
+      texto-confirmar="Sim, cancelar"
+      :nome-item="pedidoCancelar && nomeItem(pedidoCancelar)"
+      @confirm="mudarStatus(pedidoCancelar, 'cancelado')"
+    />
+
     <v-tabs v-model="aba" color="primary" class="mb-4">
       <v-tab value="previsao" class="text-none" prepend-icon="mdi-chart-timeline-variant">Previsão de compras</v-tab>
       <v-tab value="pedidos" class="text-none" prepend-icon="mdi-truck-delivery-outline">
@@ -200,7 +209,7 @@
                     ></v-list-item>
                     <v-divider></v-divider>
                     <v-list-item prepend-icon="mdi-calendar-edit" title="Previsão de entrega..." @click="abrirEdicao(item)"></v-list-item>
-                    <v-list-item prepend-icon="mdi-close-circle-outline" title="Cancelar pedido" base-color="error" @click="mudarStatus(item, 'cancelado')"></v-list-item>
+                    <v-list-item prepend-icon="mdi-close-circle-outline" title="Cancelar pedido" base-color="error" @click="pedirCancelamento(item)"></v-list-item>
                   </v-list>
                 </v-menu>
                 <v-btn size="small" color="success" variant="flat" class="text-none" prepend-icon="mdi-package-variant-closed-check" @click="abrirRecebimento(item)">
@@ -258,7 +267,7 @@
                 ></v-text-field>
               </v-col>
               <v-col cols="12" sm="5">
-                <v-text-field v-model="novoPedido.previsao_entrega" label="Previsão de entrega" type="date" variant="outlined" density="comfortable"></v-text-field>
+                <campo-data v-model="novoPedido.previsao_entrega" label="Previsão de entrega" clearable></campo-data>
               </v-col>
             </v-row>
             <v-text-field v-model="novoPedido.observacao" label="Observação" variant="outlined" density="comfortable" placeholder="Ex.: Incluído no planejamento de compras 2027"></v-text-field>
@@ -278,7 +287,7 @@
         <v-card-title class="text-h6 font-weight-bold">Atualizar pedido</v-card-title>
         <v-card-subtitle class="pb-2">{{ pedidoEdicao && nomeItem(pedidoEdicao) }}</v-card-subtitle>
         <v-card-text>
-          <v-text-field v-model="edicao.previsao_entrega" label="Previsão de entrega" type="date" variant="outlined" density="comfortable"></v-text-field>
+          <campo-data v-model="edicao.previsao_entrega" label="Previsão de entrega" clearable></campo-data>
           <v-text-field v-model="edicao.observacao" label="Observação" variant="outlined" density="comfortable" placeholder="Ex.: Pregão 12/2026 homologado"></v-text-field>
         </v-card-text>
         <v-card-actions class="px-4 pb-4">
@@ -340,7 +349,7 @@
                   <v-text-field v-model="recebimento.lote" label="Número do lote *" variant="outlined" density="comfortable" autocomplete="off" :rules="[regras.obrigatorio]"></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="6">
-                  <v-text-field v-model="recebimento.data_validade" label="Validade do lote *" type="date" variant="outlined" density="comfortable" :rules="[regras.obrigatorio]"></v-text-field>
+                  <campo-data v-model="recebimento.data_validade" label="Validade do lote *" :rules="[regras.obrigatorio]"></campo-data>
                 </v-col>
               </v-row>
             </template>
@@ -370,7 +379,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useConfigStore } from '../stores/configStore';
 import { baixarPdf, baixarCsv } from '../utils/exportarRelatorio';
 import CampoQuantidade from '../components/CampoQuantidade.vue';
+import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import { formatarQuantidade } from '../utils/unidades';
+import { hojeIso, formatarData } from '../utils/datas';
 
 const auth = useAuthStore();
 const config = useConfigStore();
@@ -420,11 +431,6 @@ const regras = {
 const num = (v) => Number(v || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 // Quantidade na unidade mais legível: 0,0005 kg -> "0,5 g"
 const qtd = (valor, sigla) => formatarQuantidade(valor, sigla);
-const formatarData = (iso) => {
-  if (!iso) return '';
-  const [a, m, d] = String(iso).substring(0, 10).split('-');
-  return `${d}/${m}/${a}`;
-};
 const bloquearSinais = (e) => {
   if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
 };
@@ -480,7 +486,7 @@ const exportar = (formato) => {
   const conteudo = {
     titulo: 'Previsão de Compras',
     subtitulo: `Base: consumo dos últimos ${p.meses_base} meses   |   Compra para ${p.meses_cobrir} meses   |   Margem de segurança: ${p.margem}%`,
-    nomeArquivo: `labstock-previsao-compras-${new Date().toISOString().slice(0, 10)}`,
+    nomeArquivo: `labstock-previsao-compras-${hojeIso()}`,
     tabelas: [{
       titulo: 'Itens a comprar',
       colunas: ['CATMAT', 'Item', 'Tipo', 'Quantidade', 'Unidade', 'Média mensal', 'Estoque atual', 'Justificativa'],
@@ -516,7 +522,7 @@ const pedidosHistorico = computed(() => pedidos.value.filter((p) => !EM_ANDAMENT
 
 const nomeItem = (p) => p.reagente?.nome || p.vidraria?.nome || '-';
 const unidadePedido = (p) => (p.categoria === 'reagentes' ? p.reagente?.unidade_medida?.sigla || '' : 'un');
-const atrasado = (p) => EM_ANDAMENTO.includes(p.status) && p.previsao_entrega && p.previsao_entrega < new Date().toISOString().slice(0, 10);
+const atrasado = (p) => EM_ANDAMENTO.includes(p.status) && p.previsao_entrega && p.previsao_entrega < hojeIso();
 
 const carregarPedidos = async () => {
   carregandoPedidos.value = true;
@@ -587,8 +593,15 @@ const salvarPedido = async () => {
   }
 };
 
+// Cancelar pede confirmação antes
+const pedidoCancelar = ref(null);
+const dialogCancelar = ref(false);
+const pedirCancelamento = (pedido) => {
+  pedidoCancelar.value = pedido;
+  dialogCancelar.value = true;
+};
+
 const mudarStatus = async (pedido, status) => {
-  if (status === 'cancelado' && !confirm(`Cancelar o pedido de ${nomeItem(pedido)}?`)) return;
   try {
     await api.put(`/pedidoscompra/${pedido.idpedido}`, { status });
     avisar(`Pedido atualizado: ${STATUS[status].texto}.`);

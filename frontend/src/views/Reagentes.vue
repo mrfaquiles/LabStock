@@ -270,35 +270,7 @@
 
               <!-- Campo de Data com Pop-up do Calendário Padronizado -->
               <v-col v-if="!editedItem.idreagente" cols="12" md="6">
-                <v-menu
-                  v-model="menuData"
-                  :close-on-content-click="false"
-                  transition="scale-transition"
-                  offset-y
-                  min-width="auto"
-                >
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-bind="props"
-                      :model-value="formatarDataExibicao(editedItem.data_validade)"
-                      label="Data de Validade *"
-                      readonly
-                      variant="outlined"
-                      density="comfortable"
-                      append-inner-icon="mdi-calendar"
-                      placeholder="Selecione a data"
-                      :rules="[regras.obrigatorio]"
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    v-model="dataValidadeObj"
-                    :min="dataMinima"
-                    class="elevation-3 rounded-lg"
-                    density="compact"
-                    hide-header
-                    @update:model-value="menuData = false"
-                  ></v-date-picker>
-                </v-menu>
+                <campo-data v-model="editedItem.data_validade" label="Data de Validade *" :min="dataMinima" :rules="[regras.obrigatorio]"></campo-data>
               </v-col>
 
               <!-- Laboratório do lote inicial -->
@@ -339,7 +311,7 @@
                     <v-text-field v-model="correcao.lote" label="Número correto" name="lote_correcao" autocomplete="off" variant="outlined" density="comfortable" hide-details :disabled="!correcao.identrada"></v-text-field>
                   </v-col>
                   <v-col cols="12" md="3">
-                    <v-text-field v-model="correcao.data_validade" label="Validade correta" type="date" variant="outlined" density="comfortable" hide-details :disabled="!correcao.identrada"></v-text-field>
+                    <campo-data v-model="correcao.data_validade" label="Validade correta" hide-details :disabled="!correcao.identrada"></campo-data>
                   </v-col>
                   <v-col cols="12" md="2" class="d-flex align-center">
                     <v-btn color="primary" variant="tonal" class="text-none" block :disabled="!correcao.identrada || !correcao.lote || !correcao.data_validade" :loading="salvandoCorrecao" @click="corrigirLote">Corrigir</v-btn>
@@ -549,29 +521,7 @@
               </v-col>
 
               <v-col cols="12" md="6">
-                <v-menu v-model="menuDataEntrada" :close-on-content-click="false" min-width="auto">
-                  <template v-slot:activator="{ props }">
-                    <v-text-field
-                      v-bind="props"
-                      :model-value="formatarDataExibicao(entrada.data_validade)"
-                      label="Validade do Lote *"
-                      readonly
-                      variant="outlined"
-                      density="comfortable"
-                      append-inner-icon="mdi-calendar"
-                      placeholder="Selecione a data"
-                      :rules="[regras.obrigatorio]"
-                    ></v-text-field>
-                  </template>
-                  <v-date-picker
-                    :model-value="null"
-                    :min="dataMinima"
-                    class="elevation-3 rounded-lg"
-                    density="compact"
-                    hide-header
-                    @update:model-value="d => { entrada.data_validade = paraIso(d); menuDataEntrada = false; }"
-                  ></v-date-picker>
-                </v-menu>
+                <campo-data v-model="entrada.data_validade" label="Validade do Lote *" :min="dataMinima" :rules="[regras.obrigatorio]"></campo-data>
               </v-col>
 
               <v-col cols="12">
@@ -613,6 +563,7 @@
 <script>
 import api, { mensagemErro } from '../plugins/axios';
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
+import { hojeIso, formatarData } from '../utils/datas';
 import { baixarPdf } from '../utils/exportarRelatorio';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import PopoverInfo from '../components/PopoverInfo.vue';
@@ -641,13 +592,10 @@ export default {
       dialogUso: false,
       dialogVencido: false,
       dialogEntrada: false,
-      menuData: false,
-      menuDataEntrada: false,
       salvando: false,
       itemParaExcluir: null,
       reagenteMov: null,
       controladoOriginal: false,
-      dataValidadeObj: null,
       snackbar: { ativo: false, texto: '', cor: 'success' },
       headers: [
         { title: 'Nome do Reagente', key: 'nome', align: 'start' },
@@ -687,14 +635,14 @@ export default {
       return !!this.editedItem.idreagente && this.auth.isAdmin && !this.controladoOriginal && !!this.editedItem.lotes?.length;
     },
     dataMinima() {
-      return new Date();
+      return hojeIso();
     },
     loteSelecionado() {
       return this.reagenteMov?.lotes?.find(l => l.identradareagente === this.uso.identrada) || null;
     },
     loteVencido() {
       const validade = this.loteSelecionado?.data_validade;
-      return !!validade && String(validade).substring(0, 10) < this.paraIso(new Date());
+      return !!validade && String(validade).substring(0, 10) < hojeIso();
     },
     // Já convertida pelo CampoQuantidade (ex.: 500 g -> 0.5 kg)
     quantidadeUsoBase() {
@@ -708,11 +656,6 @@ export default {
     siglaCadastro() {
       return this.unidadesMedida.find(u => u.idunidademedida === this.editedItem.idunidademedida)?.sigla || '';
     },
-  },
-  watch: {
-    dataValidadeObj(novaData) {
-      this.editedItem.data_validade = novaData ? this.paraIso(novaData) : '';
-    }
   },
   mounted() {
     this.carregarReagentes();
@@ -781,7 +724,6 @@ export default {
     abrirModalCadastro() {
       this.controladoOriginal = false;
       this.editedItem = this.novoReagente();
-      this.dataValidadeObj = null;
       this.dialog = true;
       this.$nextTick(() => this.$refs.form?.resetValidation());
     },
@@ -821,7 +763,6 @@ export default {
     editarReagente(item) {
       this.controladoOriginal = !!item.controlado;
       this.editedItem = { ...item, meses_alerta: item.meses_alerta || 4 };
-      this.dataValidadeObj = null;
       this.correcao = { identrada: null, lote: '', data_validade: '' };
       this.dialog = true;
     },
@@ -949,7 +890,7 @@ export default {
     formatarQuantidade,
     formatarNaBase,
     loteEstaVencido(lote) {
-      return !!lote?.data_validade && String(lote.data_validade).substring(0, 10) < this.paraIso(new Date());
+      return !!lote?.data_validade && String(lote.data_validade).substring(0, 10) < hojeIso();
     },
     tituloLote(lote) {
       if (!lote) return '';
@@ -960,22 +901,11 @@ export default {
     bloquearSinais(e) {
       if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault();
     },
-    paraIso(data) {
-      const ano = data.getFullYear();
-      const mes = String(data.getMonth() + 1).padStart(2, '0');
-      const dia = String(data.getDate()).padStart(2, '0');
-      return `${ano}-${mes}-${dia}`;
-    },
     formatarNumero(valor) {
       return Number(valor || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
     },
     formatarDataExibicao(dataStr) {
-      if (!dataStr) return '';
-      const partes = dataStr.split('-');
-      if (partes.length === 3) {
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
-      }
-      return dataStr;
+      return formatarData(dataStr);
     },
     validadeExibida(item) {
       return item.proxima_validade;
@@ -997,7 +927,7 @@ export default {
       baixarPdf({
         titulo: 'Relatório de Reagentes',
         subtitulo: `Posição do estoque em ${new Date().toLocaleDateString('pt-BR')}`,
-        nomeArquivo: `labstock-reagentes-${new Date().toISOString().slice(0, 10)}`,
+        nomeArquivo: `labstock-reagentes-${hojeIso()}`,
         tabelas: [{
           colunas: ['Nome do Reagente', 'CATMAT', 'CAS', 'Quantidade', 'Lotes (saldo / validade)', 'Localização'],
           linhas: this.reagentes.map(r => [

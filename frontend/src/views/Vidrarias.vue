@@ -368,6 +368,7 @@
 <script setup>
 import ModalConfirmacao from '../components/ModalConfirmacao.vue';
 import { baixarPdf } from '../utils/exportarRelatorio';
+import { hojeIso, formatarData } from '../utils/datas';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import PopoverInfo from '../components/PopoverInfo.vue';
 import { useVidrariaStore } from '../stores/vidrariaStore.js';
@@ -462,11 +463,6 @@ const avisar = (texto, cor = 'success') => {
   snackbar.value = { ativo: true, texto, cor };
 };
 
-const formatarData = (iso) => {
-  if (!iso) return '';
-  const [a, m, d] = String(iso).substring(0, 10).split('-');
-  return `${d}/${m}/${a}`;
-};
 
 // Impede digitar sinal negativo/decimal/exponencial em quantidades inteiras
 const bloquearSinais = (e) => {
@@ -614,7 +610,7 @@ const emitirRelatorio = () => {
   baixarPdf({
     titulo: 'Relatório de Vidrarias',
     subtitulo: `Posição do estoque em ${new Date().toLocaleDateString('pt-BR')}`,
-    nomeArquivo: `labstock-vidrarias-${new Date().toISOString().slice(0, 10)}`,
+    nomeArquivo: `labstock-vidrarias-${hojeIso()}`,
     tabelas: [{
       colunas: ['Nome do Item', 'CATMAT', 'Quantidade', 'Onde está', 'Baixas pendentes', 'Situação'],
       linhas: vidrariaStore.getAllVidrarias.map(v => [

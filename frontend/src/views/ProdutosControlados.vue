@@ -14,10 +14,10 @@
       <v-form ref="formRef">
         <v-row align="center">
           <v-col cols="12" sm="6" md="3">
-            <v-text-field v-model="dataInicio" label="Data inicial *" type="date" variant="outlined" density="comfortable" hide-details="auto" :rules="[regras.obrigatorio]"></v-text-field>
+            <campo-data v-model="dataInicio" label="Data inicial *" :max="dataFim" hide-details="auto" :rules="[regras.obrigatorio]"></campo-data>
           </v-col>
           <v-col cols="12" sm="6" md="3">
-            <v-text-field v-model="dataFim" label="Data final *" type="date" variant="outlined" density="comfortable" hide-details="auto" :rules="[regras.obrigatorio, regras.periodo]"></v-text-field>
+            <campo-data v-model="dataFim" label="Data final *" :min="dataInicio" hide-details="auto" :rules="[regras.obrigatorio, regras.periodo]"></campo-data>
           </v-col>
           <v-col cols="12" sm="6" md="4">
             <v-autocomplete
@@ -119,13 +119,8 @@ import api, { mensagemErro } from '../plugins/axios';
 import CabecalhoPagina from '../components/CabecalhoPagina.vue';
 import { baixarPdf, baixarCsv } from '../utils/exportarRelatorio';
 import { formatarQuantidade } from '../utils/unidades';
+import { paraIso, formatarData } from '../utils/datas';
 
-const paraIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const formatarData = (iso) => {
-  if (!iso) return '';
-  const [a, m, d] = String(iso).substring(0, 10).split('-');
-  return `${d}/${m}/${a}`;
-};
 const qtd = (valor, sigla) => formatarQuantidade(valor, sigla);
 
 const hoje = new Date();
